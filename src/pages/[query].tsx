@@ -18,6 +18,7 @@ import {
   CornerDownRight,
   ExternalLink,
   Facebook,
+  Home,
   Link2,
   Loader2,
   Search,
@@ -659,6 +660,11 @@ export default function Lookup({ data, target }: Props) {
           "relative w-full min-h-full grid place-items-center px-4 pt-24 pb-6"
         }
       >
+        <Link href="/" className="absolute top-6 left-6 md:top-10 md:left-10">
+          <Button variant="outline" size="icon">
+            <Home className="w-4 h-4" />
+          </Button>
+        </Link>
         <div
           className={
             "flex flex-col items-center w-full h-fit max-w-[568px] m-2"

@@ -25,11 +25,16 @@ export async function captureImage(
   type?: CaptureType,
 ) {
   if (!el || !el.current) {
-    return;
+    throw new Error("Element not found");
   }
 
   const doCapture = captureTypeMethods[type || defaultCaptureType];
-  const dataUrl = await doCapture(el.current);
+  const dataUrl = await doCapture(el.current, {
+    cacheBust: true,
+    filter: (node: HTMLElement) => {
+      return !node.classList?.contains("no-capture");
+    },
+  });
   const a = document.createElement("a");
   a.href = dataUrl;
   a.download = `${filename}.${type || defaultCaptureType}`;
@@ -38,14 +43,11 @@ export async function captureImage(
 
 export function useImageCapture(el: React.RefObject<HTMLElement>) {
   return async (filename: string, type?: CaptureType) => {
-    try {
-      await captureImage(filename, el, type);
-      toast.success("Saved!");
-    } catch (e) {
-      console.error(e);
-
-      const err = e as Error;
-      toast.error(`Failed to save: ${err.message}`);
-    }
+    const promise = captureImage(filename, el, type);
+    toast.promise(promise, {
+      loading: "Capturing...",
+      success: "Saved!",
+      error: (err) => `Failed to save: ${err.message}`,
+    });
   };
 }
