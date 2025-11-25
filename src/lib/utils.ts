@@ -101,8 +101,14 @@ export function includeArgs(from: string, ...args: string[]): boolean {
   return args.some((arg) => from.toLowerCase().includes(arg.toLowerCase()));
 }
 
-export function toErrorMessage(e: any): string {
-  return e.message || "Unknown error";
+export function toErrorMessage(e: unknown): string {
+  if (e instanceof Error) {
+    return e.message;
+  }
+  if (typeof e === 'string') {
+    return e;
+  }
+  return "Unknown error";
 }
 
 export function countDuration(startTime: number, _endTime?: number): number {
@@ -111,8 +117,13 @@ export function countDuration(startTime: number, _endTime?: number): number {
 }
 
 export function extractDomain(url: string): string | null {
+  if (!url || typeof url !== 'string') {
+    return null;
+  }
+  
   try {
-    return getDomain(getSpecialDomain(url));
+    const specialDomain = getSpecialDomain(url);
+    return getDomain(specialDomain);
   } catch {
     return null;
   }

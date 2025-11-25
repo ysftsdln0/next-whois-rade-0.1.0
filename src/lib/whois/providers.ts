@@ -98,7 +98,7 @@ export class ProviderManager {
 
   async execute(domain: string): Promise<WhoisAnalyzeResult> {
     const triedProviders = new Set<string>();
-    let lastError: any = null;
+    let lastError: Error | null = null;
 
     // Try up to the number of providers
     for (let i = 0; i < this.providers.length; i++) {
@@ -116,9 +116,10 @@ export class ProviderManager {
         triedProviders.add(provider.name);
         this.logger(`Using WHOIS provider: ${provider.name}`);
         return await provider.lookup(domain);
-      } catch (error: any) {
-        this.logger(`Provider ${provider.name} failed: ${error.message || error}. Switching to next provider...`);
-        lastError = error;
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.logger(`Provider ${provider.name} failed: ${err.message}. Switching to next provider...`);
+        lastError = err;
         // Continue to next provider
       }
     }

@@ -70,7 +70,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     );
 
     const isTap =
-      tapEnabled || (tapClassName !== undefined && tapScale !== null);
+      tapEnabled || (tapClassName !== undefined || tapScale !== undefined);
     if (isTap) {
       return (
         <Clickable

@@ -77,3 +77,27 @@ export async function setJsonRedisValue<T>(
     return false;
   }
 }
+
+export async function setJsonRedisValueWithTTL<T>(
+  key: string,
+  value: T,
+  ttl: number,
+): Promise<boolean> {
+  if (redis) {
+    try {
+      const jsonValue = JSON.stringify(value);
+      if ((await redis.set(key, jsonValue)) === "OK") {
+        if (ttl > 0) {
+          await redis.expire(key, ttl);
+        }
+        console.info(
+          `Redis cache set for key: ${key} (value length: ${jsonValue.length}, ttl: ${ttl})`,
+        );
+        return true;
+      }
+    } catch (error) {
+      console.error("Failed to set JSON with TTL for Redis:", error);
+    }
+  }
+  return false;
+}

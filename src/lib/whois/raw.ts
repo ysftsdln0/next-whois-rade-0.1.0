@@ -2,10 +2,17 @@ import { MAX_IP_WHOIS_FOLLOW, MAX_WHOIS_FOLLOW } from "@/lib/env";
 import whois from "whois-raw";
 import { extractDomain } from "@/lib/utils";
 
-export function getLookupOptions(domain: string) {
+export interface LookupOptions {
+  follow?: number;
+  server?: string;
+  timeout?: number;
+}
+
+export function getLookupOptions(domain: string): LookupOptions {
   const isDomain = !!extractDomain(domain);
-  const options: any = {
+  const options: LookupOptions = {
     follow: isDomain ? MAX_WHOIS_FOLLOW : MAX_IP_WHOIS_FOLLOW,
+    timeout: 10000, // 10 saniye timeout
   };
 
   if (domain.endsWith(".tr")) {
@@ -17,21 +24,22 @@ export function getLookupOptions(domain: string) {
 
 export function getLookupRawWhois(
   domain: string,
-  options?: any,
+  options?: LookupOptions,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      whois.lookup(domain, options, (err: Error, data: string) => {
+      whois.lookup(domain, options, (err: Error | null, data: string) => {
         if (err) {
-          // reject err like tld error
-          reject(err);
+          reject(new Error(`WHOIS lookup failed: ${err.message}`));
+        } else if (!data || data.trim().length === 0) {
+          reject(new Error("Empty WHOIS response received"));
         } else {
           resolve(data);
         }
       });
     } catch (e) {
-      // reject err like connection error
-      reject(e);
+      const error = e instanceof Error ? e : new Error(String(e));
+      reject(new Error(`WHOIS connection error: ${error.message}`));
     }
   });
 }

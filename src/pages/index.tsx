@@ -11,24 +11,32 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { cn, isEnter, toSearchURI } from "@/lib/utils";
 import { addHistory, listHistory, removeHistory } from "@/lib/history";
 import Icon from "@/components/icon";
 import Clickable from "@/components/motion/clickable";
 
 export default function Home() {
+  const router = useRouter();
   const [domain, setDomain] = React.useState<string>("");
   const [loading, setLoading] = React.useState<boolean>(false);
   const [history, setHistory] = React.useState<string[]>([]);
   const [trashMode, setTrashMode] = React.useState<boolean>(false);
+  const [mounted, setMounted] = React.useState<boolean>(false);
 
-  useEffect(() => setHistory(listHistory()), []);
+  useEffect(() => {
+    setMounted(true);
+    setHistory(listHistory());
+  }, []);
 
-  const goStage = (target: string) => {
+  const goStage = useCallback((target: string) => {
+    if (!target.trim()) return;
     setLoading(true);
-  };
+    router.push(toSearchURI(target));
+  }, [router]);
 
   return (
     <main className={"w-full h-full grid place-items-center p-4 md:p-6"}>
@@ -92,32 +100,27 @@ export default function Home() {
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             onKeyDown={(e) => {
-              if (isEnter(e) && domain.length > 0) {
+              if (isEnter(e) && domain.trim().length > 0) {
                 goStage(domain);
-                window.location.href = toSearchURI(domain);
               }
             }}
           />
-          <Link
-            href={toSearchURI(domain)}
-            className={`absolute right-0`}
-            onClick={() => domain.length > 0 && goStage(domain)}
+          <Button
+            size={`icon`}
+            variant={`outline`}
+            className={cn(
+              `absolute right-0 rounded-l-none transition duration-300`,
+              domain.trim().length === 0 && "text-muted-foreground",
+            )}
+            onClick={() => goStage(domain)}
+            disabled={loading || domain.trim().length === 0}
           >
-            <Button
-              size={`icon`}
-              variant={`outline`}
-              className={cn(
-                `rounded-l-none transition duration-300`,
-                domain.length === 0 && "text-muted-foreground",
-              )}
-            >
-              {loading ? (
-                <Loader2 className={`w-4 h-4 animate-spin`} />
-              ) : (
-                <Send className={`w-4 h-4`} />
-              )}
-            </Button>
-          </Link>
+            {loading ? (
+              <Loader2 className={`w-4 h-4 animate-spin`} />
+            ) : (
+              <Send className={`w-4 h-4`} />
+            )}
+          </Button>
         </div>
         <div
           className={cn(
@@ -132,7 +135,7 @@ export default function Home() {
           <CornerDownRight className={`w-3 h-3 mr-1`} />
           <p className={`px-1 py-0.5 border rounded-md`}>Enter</p>
         </div>
-        {history.length > 0 && (
+        {mounted && history.length > 0 && (
           <>
             <div
               className={`mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-2 gap-2 w-full h-fit`}
@@ -151,13 +154,11 @@ export default function Home() {
                     onClick={(e) => {
                       if (trashMode) {
                         e.preventDefault();
-
                         removeHistory(item);
                         setHistory(listHistory());
                         return;
-                      } else {
-                        goStage(item);
                       }
+                      goStage(item);
                     }}
                   >
                     <Icon

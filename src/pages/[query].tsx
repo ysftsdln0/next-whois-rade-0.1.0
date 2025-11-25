@@ -93,100 +93,106 @@ function getDnssecIcon(dnssec?: string) {
   }
 }
 
+interface RowProps {
+  name: string;
+  value: React.ReactNode;
+  hidden?: boolean;
+  children?: React.ReactNode;
+  likeLink?: boolean;
+}
+
+function Row({ name, value, children, hidden, likeLink }: RowProps) {
+  if (hidden) return null;
+  
+  const handleClick = () => {
+    if (likeLink && typeof value === 'string') {
+      window.open(
+        value.startsWith("http") ? value : `http://${value}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+    }
+  };
+
+  return (
+    <tr>
+      <td
+        className={`py-1 pr-2 text-right font-medium text-secondary whitespace-pre-wrap md:w-36`}
+      >
+        {name}
+      </td>
+      <td
+        className={cn(
+          `py-1 pl-2 text-left text-primary whitespace-pre-wrap break-all`,
+          likeLink && `cursor-pointer hover:underline`,
+        )}
+        onClick={handleClick}
+      >
+        {value}
+        {children}
+      </td>
+    </tr>
+  );
+}
+
 function ResultTable({ result, target }: ResultTableProps) {
-  const Row = ({
-    name,
-    value,
-    children,
-    hidden,
-    likeLink,
-  }: {
-    name: string;
-    value: any;
-    hidden?: boolean;
-    children?: React.ReactNode;
-    likeLink?: boolean;
-  }) =>
-    !hidden && (
-      <tr>
-        <td
-          className={`py-1 pr-2 text-right font-medium text-secondary whitespace-pre-wrap md:w-36`}
-        >
-          {name}
-        </td>
-        <td
-          className={cn(
-            `py-1 pl-2 text-left text-primary whitespace-pre-wrap break-all`,
-            likeLink && `cursor-pointer hover:underline`,
-          )}
-          onClick={() => {
-            if (likeLink) {
-              window.open(
-                value.startsWith("http") ? value : `http://${value}`,
-                "_blank",
-                "noopener,noreferrer",
-              );
-            }
-          }}
-        >
-          {value}
-          {children}
-        </td>
-      </tr>
-    );
+  const [expand, setExpand] = React.useState<boolean>(false);
+  const copy = useClipboard();
+
+  // useMemo hook'u component'ın en üst seviyesinde olmalı
+  const displayStatus = useMemo(() => {
+    if (!result || result.status.length === 0) {
+      return [];
+    }
+    
+    const length = result.status.length;
+    if (length > 3 && !expand) {
+      return [
+        ...result.status.slice(0, 3),
+        {
+          status: `...${length - 3} more`,
+          url: "expand",
+        },
+      ];
+    }
+
+    return result.status;
+  }, [result?.status, expand]);
 
   const StatusComp = () => {
     if (!result || result.status.length === 0) {
-      return "N/A";
+      return <span>N/A</span>;
     }
-
-    const status = useMemo(() => {
-      const length = result.status.length;
-      if (length > 3 && !expand) {
-        return [
-          ...result.status.slice(0, 3),
-          {
-            status: `...${length - 3} more`,
-            url: "expand",
-          },
-        ];
-      }
-
-      return result.status;
-    }, [result.status]);
 
     return (
       <div className={`inline-flex flex-row items-center flex-wrap`}>
-        {status.map((status, index) => (
+        {displayStatus.map((statusItem, index) => (
           <Link
-            href={status.url}
+            href={statusItem.url || "#"}
             key={index}
             target={`_blank`}
             className={`inline-flex group flex-row whitespace-nowrap flex-nowrap items-center m-0.5 cursor-pointer px-1 py-0.5 border rounded text-xs`}
             onClick={(e) => {
-              if (status.url === "expand") {
+              if (statusItem.url === "expand") {
                 e.preventDefault();
                 setExpand(!expand);
-              } else if (!status.url) {
+              } else if (!statusItem.url) {
                 e.preventDefault();
               }
             }}
           >
-            {status.url !== "expand" && (
+            {statusItem.url !== "expand" && (
               <Icon
-                icon={status.url ? <Link2 /> : <Unlink2 />}
+                icon={statusItem.url ? <Link2 /> : <Unlink2 />}
                 className={`w-3 h-3 mr-1 shrink-0 text-muted-foreground transition group-hover:text-primary`}
               />
             )}
-            {status.status}
+            {statusItem.status}
           </Link>
         ))}
       </div>
     );
   };
-
-  const [expand, setExpand] = React.useState<boolean>(false);
-  const copy = useClipboard();
 
   return (
     result && (
@@ -368,7 +374,12 @@ const ResultComp = React.forwardRef<HTMLDivElement, Props>(
 
     const { status, result, error, time } = data;
 
-    const current = getWindowHref();
+    // Hydration mismatch'i önlemek için client-side'da URL'i al
+    const [current, setCurrent] = React.useState<string>("");
+    
+    useEffect(() => {
+      setCurrent(getWindowHref());
+    }, []);
 
     return (
       <div
