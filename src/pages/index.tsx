@@ -125,6 +125,9 @@ export default function Home() {
             loading && "text-primary",
           )}
         >
+          <Link href="/test" className="hover:text-primary transition-colors">
+            Test Providers
+          </Link>
           <div className={`flex-grow`} />
           <CornerDownRight className={`w-3 h-3 mr-1`} />
           <p className={`px-1 py-0.5 border rounded-md`}>Enter</p>
