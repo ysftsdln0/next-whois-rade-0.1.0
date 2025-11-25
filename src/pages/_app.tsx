@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-switch";
 import { strEnv } from "@/lib/env";
 import { inter } from "@/lib/fonts";
 import PWAInstaller, { usePWAInstaller } from "@/components/PWAInstaller";
+import { useEffect, useState } from "react";
 
 const siteTitle = strEnv("NEXT_PUBLIC_SITE_TITLE", "Next Whois UI");
 const siteDescription = strEnv(
@@ -23,6 +24,11 @@ const siteKeywords = strEnv(
 
 export default function App({ Component, pageProps }: AppProps) {
   const { install } = usePWAInstaller();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <>
@@ -56,6 +62,7 @@ export default function App({ Component, pageProps }: AppProps) {
               alt={``}
               className={`cursor-pointer w-10 h-10 p-1 shadow-sm bg-black border rounded-md transition hover:shadow`}
               onClick={() => {
+                if (!mounted) return;
                 install(true);
               }}
             />

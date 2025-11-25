@@ -1,11 +1,12 @@
 "use client";
 
 import "@khmyznikov/pwa-install";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 export default function PWAInstaller({ ...props }) {
   return (
     // @ts-ignore
-    <pwa-install id={`pwa-install`} {...props}></pwa-install>
+    <pwa-install id="pwa-install" {...props}></pwa-install>
   );
 }
 
@@ -21,47 +22,60 @@ export type PWAInstallerMethods = {
 };
 
 export function usePWAInstaller() {
-  const getInstallerElement = (): PWAInstallerMethods =>
-    document.getElementById("pwa-install") as unknown as PWAInstallerMethods;
+  const [installer, setInstaller] = useState<PWAInstallerMethods | null>(null);
 
-  return {
-    install: (force?: boolean) => {
-      const installer = getInstallerElement();
-      installer?.showDialog(force);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const el = document.getElementById("pwa-install") as
+      | PWAInstallerMethods
+      | null;
+
+    if (!el) return;
+
+    setInstaller(el);
+
+    if (!el.isListening) {
+      el.isListening = true;
+
+      el.addEventListener("pwa-install-success-event", (e) => {
+        console.log("[installer] installation success:", e);
+      });
+
+      el.addEventListener("pwa-install-fail-event", (e) => {
+        console.error("[installer] installation failed:", e);
+      });
+
+      el.addEventListener("pwa-install-available-event", (e) => {
+        console.log("[installer] installation available:", e);
+      });
+
+      el.addEventListener("pwa-user-choice-result-event", (e) => {
+        console.log("[installer] user choice result:", e);
+      });
+
+      el.addEventListener("pwa-install-how-to-event", (e) => {
+        console.log("[installer] installation how to:", e);
+      });
+
+      el.addEventListener("pwa-install-gallery-event", (e) => {
+        console.log("[installer] installation gallery:", e);
+      });
+    }
+  }, []);
+
+  const install = useCallback(
+    (force?: boolean) => {
+      if (!installer) return;
+      installer.showDialog(force);
 
       console.log(
         `[installer] ${force ? "forced" : "prompted"} installation to:`,
         installer,
       );
-
-      if (installer && !installer.isListening) {
-        // register events
-        installer.isListening = true;
-
-        installer.addEventListener("pwa-install-success-event", (e) => {
-          console.log("[installer] installation success:", e);
-        });
-
-        installer.addEventListener("pwa-install-fail-event", (e) => {
-          console.error("[installer] installation failed:", e);
-        });
-
-        installer.addEventListener("pwa-install-available-event", (e) => {
-          console.log("[installer] installation available:", e);
-        });
-
-        installer.addEventListener("pwa-user-choice-result-event", (e) => {
-          console.log("[installer] user choice result:", e);
-        });
-
-        installer.addEventListener("pwa-install-how-to-event", (e) => {
-          console.log("[installer] installation how to:", e);
-        });
-
-        installer.addEventListener("pwa-install-gallery-event", (e) => {
-          console.log("[installer] installation gallery:", e);
-        });
-      }
     },
-  };
+    [installer],
+  );
+
+  return { install };
 }
