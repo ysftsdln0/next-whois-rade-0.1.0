@@ -1,9 +1,21 @@
 "use client";
 
-import "@khmyznikov/pwa-install";
 import { useCallback, useEffect, useState } from "react";
 
 export default function PWAInstaller({ ...props }) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // PWA install web component'i sadece client-side'da import et
+    import("@khmyznikov/pwa-install").then(() => {
+      setIsClient(true);
+    });
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
   return (
     // @ts-ignore
     <pwa-install id="pwa-install" {...props}></pwa-install>

@@ -9,8 +9,16 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-switch";
 import { strEnv } from "@/lib/env";
 import { inter } from "@/lib/fonts";
-import PWAInstaller, { usePWAInstaller } from "@/components/PWAInstaller";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+
+// PWA component'i dinamik olarak yükle - Fast Refresh sorunlarını önler
+const PWAInstaller = dynamic(() => import("@/components/PWAInstaller"), {
+  ssr: false,
+});
+
+// usePWAInstaller hook'unu da ayrı import et
+import { usePWAInstaller } from "@/components/PWAInstaller";
 
 const siteTitle = strEnv("NEXT_PUBLIC_SITE_TITLE", "Next Whois UI");
 const siteDescription = strEnv(

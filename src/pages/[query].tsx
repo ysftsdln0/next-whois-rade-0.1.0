@@ -135,11 +135,13 @@ function Row({ name, value, children, hidden, likeLink }: RowProps) {
   );
 }
 
-function ResultTable({ result, target }: ResultTableProps) {
-  const [expand, setExpand] = React.useState<boolean>(false);
-  const copy = useClipboard();
+interface StatusCompProps {
+  result?: WhoisAnalyzeResult;
+  expand: boolean;
+  setExpand: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
-  // useMemo hook'u component'ın en üst seviyesinde olmalı
+function StatusComp({ result, expand, setExpand }: StatusCompProps) {
   const displayStatus = useMemo(() => {
     if (!result || result.status.length === 0) {
       return [];
@@ -159,47 +161,50 @@ function ResultTable({ result, target }: ResultTableProps) {
     return result.status;
   }, [result?.status, expand]);
 
-  const StatusComp = () => {
-    if (!result || result.status.length === 0) {
-      return <span>N/A</span>;
-    }
+  if (!result || result.status.length === 0) {
+    return <span>N/A</span>;
+  }
 
-    return (
-      <div className={`inline-flex flex-row items-center flex-wrap`}>
-        {displayStatus.map((statusItem, index) => (
-          <Link
-            href={statusItem.url || "#"}
-            key={index}
-            target={`_blank`}
-            className={`inline-flex group flex-row whitespace-nowrap flex-nowrap items-center m-0.5 cursor-pointer px-1 py-0.5 border rounded text-xs`}
-            onClick={(e) => {
-              if (statusItem.url === "expand") {
-                e.preventDefault();
-                setExpand(!expand);
-              } else if (!statusItem.url) {
-                e.preventDefault();
-              }
-            }}
-          >
-            {statusItem.url !== "expand" && (
-              <Icon
-                icon={statusItem.url ? <Link2 /> : <Unlink2 />}
-                className={`w-3 h-3 mr-1 shrink-0 text-muted-foreground transition group-hover:text-primary`}
-              />
-            )}
-            {statusItem.status}
-          </Link>
-        ))}
-      </div>
-    );
-  };
+  return (
+    <div className={`inline-flex flex-row items-center flex-wrap`}>
+      {displayStatus.map((statusItem, index) => (
+        <Link
+          href={statusItem.url || "#"}
+          key={index}
+          target={`_blank`}
+          className={`inline-flex group flex-row whitespace-nowrap flex-nowrap items-center m-0.5 cursor-pointer px-1 py-0.5 border rounded text-xs`}
+          onClick={(e) => {
+            if (statusItem.url === "expand") {
+              e.preventDefault();
+              setExpand(!expand);
+            } else if (!statusItem.url) {
+              e.preventDefault();
+            }
+          }}
+        >
+          {statusItem.url !== "expand" && (
+            <Icon
+              icon={statusItem.url ? <Link2 /> : <Unlink2 />}
+              className={`w-3 h-3 mr-1 shrink-0 text-muted-foreground transition group-hover:text-primary`}
+            />
+          )}
+          {statusItem.status}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function ResultTable({ result, target }: ResultTableProps) {
+  const [expand, setExpand] = React.useState<boolean>(false);
+  const copy = useClipboard();
 
   return (
     result && (
       <table className={`w-full text-sm mb-4 whitespace-pre-wrap`}>
         <tbody>
           <Row name={`Name`} value={result.domain || target.toUpperCase()} />
-          <Row name={`Status`} value={<StatusComp />} />
+          <Row name={`Status`} value={<StatusComp result={result} expand={expand} setExpand={setExpand} />} />
           <Row
             name={`Registrar`}
             value={result.registrar}
@@ -366,7 +371,7 @@ function ResultTable({ result, target }: ResultTableProps) {
 }
 
 const ResultComp = React.forwardRef<HTMLDivElement, Props>(
-  ({ data, target, isCapture }: Props, ref) => {
+  function ResultCompInner({ data, target, isCapture }: Props, ref) {
     const copy = useClipboard();
 
     const captureObject = React.useRef<HTMLDivElement>(null);
@@ -650,6 +655,8 @@ const ResultComp = React.forwardRef<HTMLDivElement, Props>(
     );
   },
 );
+
+ResultComp.displayName = "ResultComp";
 
 export default function Lookup({ data, target }: Props) {
   const [inputDomain, setInputDomain] = React.useState<string>(target);
