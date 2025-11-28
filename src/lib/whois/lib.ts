@@ -25,6 +25,25 @@ const specialDomains: Record<string, string> = {
   "net.cn": "www.net.cn",
   "edu.cn": "www.edu.cn",
   "mil.cn": "www.mil.cn",
+  // Turkish .tr subdomains
+  "com.tr": "www.com.tr",
+  "net.tr": "www.net.tr",
+  "org.tr": "www.org.tr",
+  "gov.tr": "www.gov.tr",
+  "edu.tr": "www.edu.tr",
+  "mil.tr": "www.mil.tr",
+  "biz.tr": "www.biz.tr",
+  "info.tr": "www.info.tr",
+  "web.tr": "www.web.tr",
+  "gen.tr": "www.gen.tr",
+  "bel.tr": "www.bel.tr",
+  "pol.tr": "www.pol.tr",
+  "av.tr": "www.av.tr",
+  "dr.tr": "www.dr.tr",
+  "name.tr": "www.name.tr",
+  "tel.tr": "www.tel.tr",
+  "tv.tr": "www.tv.tr",
+  "k12.tr": "www.k12.tr",
 };
 
 const defaultRegex: DomainRegex = {
@@ -339,6 +358,17 @@ const coRegex: DomainRegex = {
   notFound: "No Data Found",
 };
 
+// Turkish .tr domains (whois.trabis.gov.tr)
+const trRegex: DomainRegex = {
+  domainName: "\\*\\* Domain Name: *([^\\s]+)",
+  registrar: "\\*\\* Registrar: *(.+)",
+  creationDate: "Created on\.*: *(.+)",
+  expirationDate: "Expires on\.*: *(.+)",
+  nameServers: "\\*\\* Host Name\.*: *([^\\s]+)",
+  dateFormat: "YYYY-MMM-DD.",
+  notFound: "No match found",
+};
+
 export function getDomainRegex(domain: string): DomainRegex {
   if (
     domain.endsWith(".com") ||
@@ -408,6 +438,8 @@ export function getDomainRegex(domain: string): DomainRegex {
     return isRegex;
   } else if (domain.endsWith(".co")) {
     return coRegex;
+  } else if (domain.endsWith(".tr")) {
+    return trRegex;
   } else {
     return defaultRegex;
   }
