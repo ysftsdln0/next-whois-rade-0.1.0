@@ -84,7 +84,8 @@ export function useSaver() {
 }
 
 // Alt dizin desteği için basePath
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+// Ana dizinde çalışacaksa '' (boş string) yapın
+const basePath = '/whois-rade';
 
 export function toSearchURI(query: string) {
   const q = query.trim();
