@@ -4,7 +4,7 @@ module.exports = {
       name: "whois-app",
       script: "node_modules/next/dist/bin/next",
       args: "start",
-      cwd: "/var/www/vhosts/ysftsdln.com/httpdocs",
+      cwd: "/var/www/vhosts/ysftsdln.com/httpdocs/whois-rade",
       instances: 1,
       exec_mode: "fork",
       autorestart: true,
@@ -13,6 +13,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: 3000,
+        NEXT_PUBLIC_BASE_PATH: "/whois-rade",
       },
     },
   ],

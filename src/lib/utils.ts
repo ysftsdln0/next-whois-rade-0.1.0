@@ -83,9 +83,12 @@ export function useSaver() {
   };
 }
 
+// Alt dizin desteği için basePath
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 export function toSearchURI(query: string) {
   const q = query.trim();
-  return q ? `/${encodeURIComponent(q)}` : "/";
+  return q ? `${basePath}/${encodeURIComponent(q)}` : `${basePath}/`;
 }
 
 export function toReadableISODate(date: string | null) {

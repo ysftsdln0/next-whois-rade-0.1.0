@@ -2,8 +2,15 @@
 
 import setupPWA from 'next-pwa';
 
+// Alt dizinde çalıştırmak için basePath ayarı
+// Örnek: /whois-rade altında çalışacaksa '/whois-rade' yazın
+// Ana dizinde çalışacaksa '' (boş string) bırakın
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 const nextConfig = {
   reactStrictMode: true,
+  basePath: basePath,
+  assetPrefix: basePath,
 };
 
 const withPWA = setupPWA({
