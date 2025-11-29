@@ -1,4 +1,4 @@
-import { lookupWhoisWithCache } from "@/lib/whois/lookup";
+import { distributedWhoisLookup } from "@/lib/whois/distributed-lookup";
 import {
   cleanDomainQuery,
   cn,
@@ -66,7 +66,7 @@ export async function getServerSideProps(context: NextPageContext) {
 
   return {
     props: {
-      data: await lookupWhoisWithCache(target),
+      data: await distributedWhoisLookup(target),
       target,
     },
   };
