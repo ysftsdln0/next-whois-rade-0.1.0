@@ -5,6 +5,7 @@ import WhoisForm from '@/components/WhoisForm';
 import WhoisResult from '@/components/WhoisResult';
 import StatsDisplay from '@/components/StatsDisplay';
 import ApiStatusPanel from '@/components/ApiStatusPanel';
+import { BackgroundPaths } from '@/components/ui/background-paths';
 import type { WhoisResult as WhoisResultType } from '@/lib/types';
 
 // API v2 Response type
@@ -154,14 +155,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen grid-bg">
-      {/* Ambient light effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-white/[0.01] rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative container mx-auto px-4 py-12 md:py-20 max-w-5xl">
+    <BackgroundPaths>
+      <div className="container mx-auto px-4 py-12 md:py-20 max-w-5xl">
         {/* Header */}
         <header className="text-center mb-16 md:mb-20">
           <div className="inline-flex items-center justify-center mb-8">
@@ -290,6 +285,6 @@ export default function Home() {
           </div>
         </footer>
       </div>
-    </div>
+    </BackgroundPaths>
   );
 }
