@@ -36,18 +36,13 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
     onClear();
   }, [onClear]);
 
-  /**
-   * Example domains for quick testing
-   */
-  const exampleDomains = ['google.com', 'github.com', 'amazon.com', 'microsoft.com'];
-
   return (
     <div className={`glass-card rounded-2xl p-6 md:p-8 transition-all duration-300 ${isFocused ? 'glow border-white/10' : 'border-white/5'} border`}>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Domain input */}
         <div>
           <label htmlFor="domain" className="block text-2xs uppercase tracking-wider text-neutral-500 mb-3">
-            Domain Name
+            Domaın Adı
           </label>
           <div className="relative group">
             {/* Input glow effect */}
@@ -66,7 +61,7 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
                 onChange={(e) => setDomain(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                placeholder="example.com"
+                placeholder="ornek.com.tr veya example.com"
                 className="w-full pl-12 pr-12 py-4 bg-black/50 border border-white/10 rounded-xl 
                            text-white placeholder-neutral-600
                            focus:outline-none focus:border-white/20 focus:bg-black/70
@@ -80,7 +75,7 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
                   type="button"
                   onClick={() => setDomain('')}
                   className="absolute right-4 text-neutral-500 hover:text-white transition-colors"
-                  title="Clear input"
+                  title="Temizle"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
@@ -89,23 +84,6 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
               )}
             </div>
           </div>
-        </div>
-
-        {/* Quick examples */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-2xs uppercase tracking-wider text-neutral-600">Quick:</span>
-          {exampleDomains.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => setDomain(example)}
-              className="text-xs px-3 py-1.5 bg-white/[0.03] border border-white/5 text-neutral-400
-                         hover:bg-white/[0.06] hover:border-white/10 hover:text-white
-                         rounded-lg transition-all duration-200 font-mono"
-            >
-              {example}
-            </button>
-          ))}
         </div>
 
         {/* Options */}
@@ -131,7 +109,7 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
               </svg>
             </div>
             <span className="text-sm text-neutral-400 group-hover:text-neutral-300 transition-colors">
-              Bypass cache
+              Cache&apos;i atla
             </span>
           </label>
         </div>
@@ -155,14 +133,14 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>Querying...</span>
+                <span>Sorgulanıyor...</span>
               </>
             ) : (
               <>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span>Lookup</span>
+                <span>Sorgula</span>
               </>
             )}
           </button>
@@ -176,7 +154,7 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
                        focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-black
                        transition-all duration-200"
           >
-            Clear
+            Temizle
           </button>
         </div>
       </form>

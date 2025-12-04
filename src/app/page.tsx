@@ -159,43 +159,17 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12 md:py-20 max-w-5xl">
         {/* Header */}
         <header className="text-center mb-16 md:mb-20">
-          <div className="inline-flex items-center justify-center mb-8">
-            <div className="relative">
-              {/* Logo glow effect */}
-              <div className="absolute inset-0 bg-white/10 rounded-full blur-2xl scale-150" />
-              <div className="relative w-16 h-16 md:w-20 md:h-20 border border-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                <svg 
-                  className="w-8 h-8 md:w-10 md:h-10 text-white" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={1.5} 
-                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" 
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4">
-            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 flex items-center justify-center gap-3 md:gap-4">
+            {/* RADE Logo */}
+            <img 
+              src="/rade-logo.png" 
+              alt="RADE" 
+              className="h-10 md:h-14 lg:h-16 w-auto"
+            />
+            <span className="text-white">
               WHOIS
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-neutral-500 max-w-xl mx-auto font-light">
-            Domain Intelligence — Fast, reliable, minimal
-          </p>
-          
-          {/* Decorative line */}
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <div className="w-12 h-px bg-gradient-to-r from-transparent to-white/20" />
-            <div className="w-1.5 h-1.5 rounded-full bg-white/30" />
-            <div className="w-12 h-px bg-gradient-to-l from-transparent to-white/20" />
-          </div>
         </header>
 
         {/* Main content */}
@@ -228,7 +202,7 @@ export default function Home() {
                 <div className="w-12 h-12 rounded-full border-2 border-white/10 border-t-white/50 animate-spin" />
                 <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-transparent border-b-white/20 animate-spin-slow" />
               </div>
-              <p className="text-neutral-500 mt-6 text-sm tracking-wide">Querying domain...</p>
+              <p className="text-neutral-500 mt-6 text-sm tracking-wide">Domain sorgulanıyor...</p>
             </div>
           )}
 
@@ -243,7 +217,7 @@ export default function Home() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-2xs uppercase tracking-wider text-neutral-500 mb-0.5">API Used</p>
+                    <p className="text-2xs uppercase tracking-wider text-neutral-500 mb-0.5">Kullanılan API</p>
                     <p className="text-white font-medium">
                       {usedApi.name} <span className="text-neutral-500 font-normal">:{usedApi.port}</span>
                     </p>
@@ -251,7 +225,7 @@ export default function Home() {
                 </div>
                 {queryTime && (
                   <div className="text-right">
-                    <p className="text-2xs uppercase tracking-wider text-neutral-500 mb-0.5">Response</p>
+                    <p className="text-2xs uppercase tracking-wider text-neutral-500 mb-0.5">Yanıt Süresi</p>
                     <p className="text-white font-mono text-sm">{queryTime}</p>
                   </div>
                 )}
@@ -274,14 +248,16 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="mt-20 pt-8 border-t border-white/5">
-          <div className="text-center space-y-3">
-            <p className="text-neutral-600 text-sm">
-              WHOIS Intelligence • Powered by 3 Backend APIs
+          <div className="text-center">
+            <p className="text-neutral-500 text-sm flex items-center justify-center gap-2">
+              Bu hizmet Yusuf Efe Taşdelen tarafından.
+              <img 
+                src="/rade-logo.png" 
+                alt="RADE" 
+                className="h-4 w-auto inline-block"
+              />
+              için hazırlandı
             </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.02] border border-white/5">
-              <span className="text-neutral-500 text-xs">Endpoint:</span>
-              <code className="text-white/70 text-xs font-mono">GET /api/v2/whois?domain=</code>
-            </div>
           </div>
         </footer>
       </div>

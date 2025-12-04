@@ -29,7 +29,7 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
       <div className="glass-card rounded-2xl p-6 border border-white/5">
         <div className="flex items-center justify-center py-8 gap-3">
           <div className="w-5 h-5 border-2 border-white/10 border-t-white/50 rounded-full animate-spin" />
-          <span className="text-neutral-500 text-sm">Loading API status...</span>
+          <span className="text-neutral-500 text-sm">API durumu yükleniyor...</span>
         </div>
       </div>
     );
@@ -50,11 +50,8 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
           </div>
           <div>
             <h3 className="font-medium text-white text-sm">
-              Backend APIs
+              Backend API Durumu
             </h3>
-            <p className="text-xs text-neutral-500">
-              Load balanced WHOIS services
-            </p>
           </div>
         </div>
 
@@ -74,7 +71,7 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                 ? 'bg-warning'
                 : 'bg-error'
             }`} />
-            {apiStatus.healthyApis}/{apiStatus.totalApis} Online
+            {apiStatus.healthyApis}/{apiStatus.totalApis} Aktif
           </div>
 
           {/* Refresh button */}
@@ -84,7 +81,7 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
               onRefresh();
             }}
             className="p-2 text-neutral-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-            title="Refresh"
+            title="Yenile"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -169,14 +166,14 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        Active
+                        Aktif
                       </>
                     ) : (
                       <>
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                        Offline
+                        Çevrimdışı
                       </>
                     )}
                   </span>
@@ -191,17 +188,6 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
             ))}
           </div>
 
-          {/* Info box */}
-          <div className="mt-4 p-3 bg-white/[0.02] rounded-xl border border-white/5">
-            <div className="flex items-start gap-3">
-              <svg className="w-4 h-4 text-neutral-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-xs text-neutral-500 leading-relaxed">
-                Queries are distributed across healthy APIs for load balancing and failover protection.
-              </p>
-            </div>
-          </div>
         </div>
       )}
     </div>

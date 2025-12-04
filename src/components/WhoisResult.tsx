@@ -52,7 +52,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'N/A';
     try {
-      return new Date(dateStr).toLocaleDateString('en-US', {
+      return new Date(dateStr).toLocaleDateString('tr-TR', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -78,47 +78,47 @@ export default function WhoisResult({ result }: WhoisResultProps) {
           </svg>
         ),
         fields: [
-          { label: 'Domain Name', value: data.domainName },
-          { label: 'Registrar', value: data.registrar },
-          { label: 'Registrar URL', value: data.registrarUrl, isLink: true },
-          { label: 'Registrar IANA ID', value: data.registrarIanaId },
+          { label: 'Domain Adı', value: data.domainName },
+          { label: 'Kayıt Firması', value: data.registrar },
+          { label: 'Kayıt Firması URL', value: data.registrarUrl, isLink: true },
+          { label: 'Kayıt Firması IANA ID', value: data.registrarIanaId },
           { label: 'DNSSEC', value: data.dnssec },
         ],
       },
       {
-        title: 'Dates',
+        title: 'Tarihler',
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         ),
         fields: [
-          { label: 'Created', value: formatDate(data.creationDate) },
-          { label: 'Updated', value: formatDate(data.updatedDate) },
-          { label: 'Expires', value: formatDate(data.expirationDate) },
+          { label: 'Oluşturulma', value: formatDate(data.creationDate) },
+          { label: 'Güncelleme', value: formatDate(data.updatedDate) },
+          { label: 'Bitiş', value: formatDate(data.expirationDate) },
         ],
       },
       {
-        title: 'Registrant',
+        title: 'Kayıt Sahibi',
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         ),
         fields: [
-          { label: 'Name', value: data.registrantName },
-          { label: 'Organization', value: data.registrantOrganization },
-          { label: 'Street', value: data.registrantStreet },
-          { label: 'City', value: data.registrantCity },
-          { label: 'State', value: data.registrantState },
-          { label: 'Postal Code', value: data.registrantPostalCode },
-          { label: 'Country', value: data.registrantCountry },
-          { label: 'Email', value: data.registrantEmail },
-          { label: 'Phone', value: data.registrantPhone },
+          { label: 'İsim', value: data.registrantName },
+          { label: 'Kuruluş', value: data.registrantOrganization },
+          { label: 'Adres', value: data.registrantStreet },
+          { label: 'Şehir', value: data.registrantCity },
+          { label: 'İl', value: data.registrantState },
+          { label: 'Posta Kodu', value: data.registrantPostalCode },
+          { label: 'Ülke', value: data.registrantCountry },
+          { label: 'E-posta', value: data.registrantEmail },
+          { label: 'Telefon', value: data.registrantPhone },
         ],
       },
       {
-        title: 'Name Servers',
+        title: 'nameservers',
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
@@ -127,13 +127,13 @@ export default function WhoisResult({ result }: WhoisResultProps) {
         fields: data.nameServers?.map((ns, i) => ({ label: `NS ${i + 1}`, value: ns })) || [],
       },
       {
-        title: 'Status',
+        title: 'Durum',
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         ),
-        fields: data.status?.map((status, i) => ({ label: `Status ${i + 1}`, value: status })) || [],
+        fields: data.status?.map((status, i) => ({ label: `Durum ${i + 1}`, value: status })) || [],
       },
     ];
   }, [result.data]);
@@ -155,7 +155,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                 {result.domain}
               </h2>
               <p className="text-xs text-neutral-500">
-                {result.cached && <span className="text-warning">(Cached) </span>}
+                {result.cached && <span className="text-warning">(Önbellekten) </span>}
                 {new Date(result.timestamp).toLocaleString()}
               </p>
             </div>
@@ -164,17 +164,17 @@ export default function WhoisResult({ result }: WhoisResultProps) {
           {/* View mode tabs */}
           <div className="flex items-center gap-3">
             <div className="flex rounded-lg bg-black/50 p-1 border border-white/5">
-              {(['formatted', 'json', 'providers'] as ViewMode[]).map((mode) => (
+              {([{key: 'formatted', label: 'Biçimli'}, {key: 'json', label: 'JSON'}, {key: 'providers', label: 'Sağlayıcılar'}] as {key: ViewMode, label: string}[]).map((mode) => (
                 <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
+                  key={mode.key}
+                  onClick={() => setViewMode(mode.key)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200
-                    ${viewMode === mode 
+                    ${viewMode === mode.key 
                       ? 'bg-white/10 text-white' 
                       : 'text-neutral-500 hover:text-neutral-300'
                     }`}
                 >
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  {mode.label}
                 </button>
               ))}
             </div>
@@ -185,7 +185,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                 onClick={handleCopyJson}
                 className="p-2 text-neutral-500 hover:text-white 
                            hover:bg-white/5 rounded-lg transition-all duration-200"
-                title="Copy JSON"
+                title="JSON Kopyala"
               >
                 {copiedJson ? (
                   <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                 onClick={handleDownloadJson}
                 className="p-2 text-neutral-500 hover:text-white 
                            hover:bg-white/5 rounded-lg transition-all duration-200"
-                title="Download JSON"
+                title="JSON İndir"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -270,7 +270,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-neutral-500">No WHOIS data available for this domain</p>
+            <p className="text-neutral-500">Bu domain için WHOIS verisi bulunamadı</p>
           </div>
         )}
 
@@ -285,10 +285,10 @@ export default function WhoisResult({ result }: WhoisResultProps) {
             {/* Summary */}
             <div className="flex gap-4 text-xs font-mono">
               <span className="text-success">
-                ✓ {successfulProviders.length} successful
+                ✓ {successfulProviders.length} başarılı
               </span>
               <span className="text-error">
-                ✗ {failedProviders.length} failed
+                ✗ {failedProviders.length} başarısız
               </span>
             </div>
 
@@ -317,7 +317,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                   )}
                   {provider.success && provider.data && (
                     <p className="text-xs text-success/80">
-                      Retrieved data for {provider.data.domainName || result.domain}
+                      {provider.data.domainName || result.domain} için veri alındı
                     </p>
                   )}
                 </div>
