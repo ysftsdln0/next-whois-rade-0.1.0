@@ -1,0 +1,11 @@
+{
+  "name": "whois-api-2",
+  "version": "1.0.0",
+  "description": "WHOIS API Microservice 2",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
