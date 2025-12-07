@@ -6,17 +6,18 @@
 import { log } from './logger';
 import { getCache } from './cache';
 import { isValidDomain, normalizeDomain } from './domain-utils';
-import { queryNativeWhois, queryWhoisXml, queryJsonWhois } from './providers';
+import { queryNativeWhois, queryWhoisXml, queryJsonWhois, queryTredis, isTrDomain } from './providers';
 import type { WhoisData, WhoisResult, ProviderResponse, ProviderConfig } from './types';
 
 // Default configuration
 const DEFAULT_CONFIG = {
   providers: {
+    tredis: { enabled: true, priority: 0, description: 'TREDIS - Turkish Domain Registry (.tr)' },
     native: { enabled: true, priority: 1, description: 'Native WHOIS protocol' },
     whoisxml: { enabled: false, priority: 2, apiKey: '', description: 'WhoisXML API' },
     jsonwhois: { enabled: false, priority: 3, apiKey: '', description: 'JSON WHOIS API' },
   },
-  timeout: 10000,
+  timeout: 15000,
   retries: 2,
 };
 
@@ -46,18 +47,20 @@ function mergeWhoisData(responses: ProviderResponse[]): WhoisData | null {
     // Merge each field, only if not already set
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined && value !== '' && value !== null) {
-        if (!(key in merged) || merged[key as keyof WhoisData] === undefined || merged[key as keyof WhoisData] === '') {
-          (merged as Record<string, unknown>)[key] = value;
+        const mergedKey = key as keyof WhoisData;
+        if (!(key in merged) || merged[mergedKey] === undefined || merged[mergedKey] === '') {
+          // Use type assertion through unknown for dynamic key assignment
+          (merged as unknown as Record<string, unknown>)[key] = value;
         }
       }
     }
 
     // Special handling for arrays - merge them
     if (data.nameServers && data.nameServers.length > 0) {
-      merged.nameServers = [...new Set([...(merged.nameServers || []), ...data.nameServers])];
+      merged.nameServers = Array.from(new Set([...(merged.nameServers || []), ...data.nameServers]));
     }
     if (data.status && data.status.length > 0) {
-      merged.status = [...new Set([...(merged.status || []), ...data.status])];
+      merged.status = Array.from(new Set([...(merged.status || []), ...data.status]));
     }
   }
 
@@ -81,6 +84,9 @@ async function queryProvider(
       let response: ProviderResponse;
 
       switch (provider) {
+        case 'tredis':
+          response = await queryTredis(domain, config.timeout);
+          break;
         case 'native':
           response = await queryNativeWhois(domain, config.timeout);
           break;
@@ -192,7 +198,7 @@ export async function lookupWhois(
 
   // Query all enabled providers in parallel
   const providerPromises = enabledProviders.map(provider =>
-    queryProvider(provider.name, normalizedDomain, config, provider.apiKey)
+    queryProvider(provider.name, normalizedDomain, config, 'apiKey' in provider ? provider.apiKey : undefined)
   );
 
   const responses = await Promise.all(providerPromises);
