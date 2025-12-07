@@ -5,13 +5,14 @@ import type { WhoisResult as WhoisResultType } from '@/lib/types';
 
 interface WhoisResultProps {
   result: WhoisResultType;
+  queryType?: 'domain' | 'ip';
 }
 
 /**
  * WHOIS result display component
  * Shows lookup results in multiple formats
  */
-export default function WhoisResult({ result }: WhoisResultProps) {
+export default function WhoisResult({ result, queryType = 'domain' }: WhoisResultProps) {
   const [copiedJson, setCopiedJson] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
 
@@ -271,7 +272,24 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-[#34495E]/70">Bu domain için WHOIS verisi bulunamadı</p>
+            {queryType === 'domain' ? (
+              <>
+                <p className="text-[#34495E]/70 mb-4">Bu domain için WHOIS verisi bulunamadı</p>
+                <a 
+                  href="https://radehosting.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#34495E] text-white rounded-lg hover:bg-[#2c3e50] transition-colors font-medium"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Bu domaine sahip olmak ister misin?
+                </a>
+              </>
+            ) : (
+              <p className="text-[#34495E]/70">Bu IP adresi için WHOIS verisi bulunamadı</p>
+            )}
           </div>
         )}
       </div>

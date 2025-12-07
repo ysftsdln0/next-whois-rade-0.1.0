@@ -37,6 +37,7 @@ export default function HomeContent() {
   const [error, setError] = useState<string | null>(null);
   const [usedApi, setUsedApi] = useState<{ name: string; port: number } | null>(null);
   const [queryTime, setQueryTime] = useState<string | null>(null);
+  const [currentQueryType, setCurrentQueryType] = useState<'domain' | 'ip'>('domain');
 
   // Set mounted state on client
   useEffect(() => {
@@ -44,17 +45,22 @@ export default function HomeContent() {
   }, []);
 
   /**
-   * Handle WHOIS lookup form submission
+   * Handle WHOIS/IP lookup form submission
    */
-  const handleLookup = useCallback(async (domain: string) => {
+  const handleLookup = useCallback(async (query: string, queryType: 'domain' | 'ip') => {
     setLoading(true);
+    setCurrentQueryType(queryType);
     setError(null);
     setResult(null);
     setUsedApi(null);
     setQueryTime(null);
 
     try {
-      const response = await fetch(`/api/v2/whois?domain=${encodeURIComponent(domain)}`);
+      const endpoint = queryType === 'ip' 
+        ? `/api/v2/whois?domain=${encodeURIComponent(query)}&type=ip`
+        : `/api/v2/whois?domain=${encodeURIComponent(query)}`;
+      
+      const response = await fetch(endpoint);
       const data: ApiV2Response = await response.json();
 
       if (data.success && data.data) {
@@ -62,17 +68,25 @@ export default function HomeContent() {
         setUsedApi(data.usedApi);
         setQueryTime(data.queryTime || null);
 
+        // Check if domain was actually found (not just raw data with "No match")
+        const rawData = data.data.raw || '';
+        const parsed = data.data.parsed || {};
+        const isNotFound = rawData.toLowerCase().includes('no match') || 
+                          rawData.toLowerCase().includes('not found') ||
+                          rawData.toLowerCase().includes('no entries found') ||
+                          Object.keys(parsed).length === 0;
+
         // Convert to WhoisResult format
         const whoisResult: WhoisResultType = {
-          domain: data.domain || domain,
+          domain: data.domain || query,
           timestamp: new Date().toISOString(),
           cached: data.fromCache || false,
           providers: [{
             provider: data.usedApi.name,
-            success: true,
+            success: !isNotFound,
             responseTime: parseInt(data.queryTime || '0'),
-            data: {
-              domainName: data.data.parsed?.domainName as string || domain,
+            data: isNotFound ? undefined : {
+              domainName: data.data.parsed?.domainName as string || query,
               registrar: data.data.parsed?.registrar as string,
               registrarUrl: data.data.parsed?.registrarUrl as string,
               creationDate: data.data.dates?.created || data.data.parsed?.creationDate as string,
@@ -84,8 +98,8 @@ export default function HomeContent() {
               rawData: data.data.raw,
             }
           }],
-          data: {
-            domainName: data.data.parsed?.domainName as string || domain,
+          data: isNotFound ? null : {
+            domainName: data.data.parsed?.domainName as string || query,
             registrar: data.data.parsed?.registrar as string,
             registrarUrl: data.data.parsed?.registrarUrl as string,
             creationDate: data.data.dates?.created || data.data.parsed?.creationDate as string,
@@ -100,11 +114,11 @@ export default function HomeContent() {
         };
         setResult(whoisResult);
       } else {
-        setError(data.error || 'Failed to lookup domain');
+        setError(data.error || 'Sorgu başarısız oldu');
         setUsedApi(data.usedApi);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error occurred');
+      setError(err instanceof Error ? err.message : 'Ağ hatası oluştu');
     } finally {
       setLoading(false);
     }
@@ -182,7 +196,7 @@ export default function HomeContent() {
             {/* Results */}
             {result && !loading && (
               <div className="animate-scale-in ">
-                <WhoisResult result={result} />
+                <WhoisResult result={result} queryType={currentQueryType} />
               </div>
             )}
           </div>
