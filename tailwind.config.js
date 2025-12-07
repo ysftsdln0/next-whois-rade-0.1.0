@@ -23,14 +23,14 @@ module.exports = {
   				'950': '#09090b'
   			},
   			surface: {
-  				DEFAULT: '#0d0d0d',
-  				secondary: '#111111',
-  				tertiary: '#1a1a1a'
+  				DEFAULT: '#ffffff',
+  				secondary: '#f8f8f8',
+  				tertiary: '#f0f0f0'
   			},
   			border: 'hsl(var(--border))',
-  			success: '#00ff88',
-  			error: '#ff4444',
-  			warning: '#ffaa00',
+  			success: '#10b981',
+  			error: '#ef4444',
+  			warning: '#f59e0b',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -104,11 +104,11 @@ module.exports = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		boxShadow: {
-  			'inner-white': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
-  			glow: '0 0 20px rgba(255, 255, 255, 0.05), 0 0 40px rgba(255, 255, 255, 0.02)',
-  			'glow-lg': '0 0 40px rgba(255, 255, 255, 0.1), 0 0 80px rgba(255, 255, 255, 0.05)',
-  			'glow-success': '0 0 20px rgba(0, 255, 136, 0.2), 0 0 40px rgba(0, 255, 136, 0.1)',
-  			'glow-error': '0 0 20px rgba(255, 68, 68, 0.2), 0 0 40px rgba(255, 68, 68, 0.1)'
+  			'inner-white': 'inset 0 1px 0 0 rgba(0, 0, 0, 0.03)',
+  			glow: '0 0 20px rgba(0, 0, 0, 0.05), 0 0 40px rgba(0, 0, 0, 0.02)',
+  			'glow-lg': '0 0 40px rgba(0, 0, 0, 0.08), 0 0 80px rgba(0, 0, 0, 0.04)',
+  			'glow-success': '0 0 20px rgba(16, 185, 129, 0.2), 0 0 40px rgba(16, 185, 129, 0.1)',
+  			'glow-error': '0 0 20px rgba(239, 68, 68, 0.2), 0 0 40px rgba(239, 68, 68, 0.1)'
   		},
   		animation: {
   			'spin-slow': 'spin 2s linear infinite',
@@ -158,18 +158,18 @@ module.exports = {
   			},
   			borderGlow: {
   				'0%, 100%': {
-  					borderColor: 'rgba(255, 255, 255, 0.1)'
+  					borderColor: 'rgba(0, 0, 0, 0.1)'
   				},
   				'50%': {
-  					borderColor: 'rgba(255, 255, 255, 0.2)'
+  					borderColor: 'rgba(0, 0, 0, 0.2)'
   				}
   			}
   		},
   		backgroundImage: {
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
   			'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-  			'grid-pattern': 'linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px)',
-  			'dot-pattern': 'radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)'
+  			'grid-pattern': 'linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px)',
+  			'dot-pattern': 'radial-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px)'
   		},
   		backgroundSize: {
   			grid: '50px 50px',

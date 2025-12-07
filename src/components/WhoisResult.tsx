@@ -2,21 +2,18 @@
 
 import { useState, useMemo } from 'react';
 import type { WhoisResult as WhoisResultType } from '@/lib/types';
-import JsonDisplay from './JsonDisplay';
 
 interface WhoisResultProps {
   result: WhoisResultType;
 }
-
-type ViewMode = 'formatted' | 'json' | 'providers';
 
 /**
  * WHOIS result display component
  * Shows lookup results in multiple formats
  */
 export default function WhoisResult({ result }: WhoisResultProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('formatted');
   const [copiedJson, setCopiedJson] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
 
   /**
    * Copy JSON to clipboard
@@ -138,76 +135,53 @@ export default function WhoisResult({ result }: WhoisResultProps) {
     ];
   }, [result.data]);
 
-  // Check for successful providers
-  const successfulProviders = result.providers.filter(p => p.success);
-  const failedProviders = result.providers.filter(p => !p.success);
-
   return (
-    <div className="glass-card rounded-2xl border border-white/5 overflow-hidden">
+    <div className="bg-white rounded-2xl border-2 border-[#34495E] overflow-hidden">
       {/* Header with tabs */}
-      <div className="border-b border-white/5">
+      <div className="border-b-2 border-[#34495E]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between p-5 gap-4">
           {/* Result info */}
           <div className="flex items-center gap-4">
-            <div className={`w-3 h-3 rounded-full ${result.data ? 'bg-success shadow-glow-success' : 'bg-error shadow-glow-error'}`} />
+            <div className={`w-3 h-3 rounded-full ${result.data ? 'bg-emerald-500 shadow-glow-success' : 'bg-red-500 shadow-glow-error'}`} />
             <div>
-              <h2 className="text-lg font-semibold text-white font-mono">
+              <h2 className="text-lg font-semibold text-[#34495E] font-mono">
                 {result.domain}
               </h2>
-              <p className="text-xs text-neutral-500">
-                {result.cached && <span className="text-warning">(Önbellekten) </span>}
+              <p className="text-xs text-[#34495E]/70">
+                {result.cached && <span className="text-amber-600">(Önbellekten) </span>}
                 {new Date(result.timestamp).toLocaleString()}
               </p>
             </div>
           </div>
 
-          {/* View mode tabs */}
-          <div className="flex items-center gap-3">
-            <div className="flex rounded-lg bg-black/50 p-1 border border-white/5">
-              {([{key: 'formatted', label: 'Biçimli'}, {key: 'json', label: 'JSON'}, {key: 'providers', label: 'Sağlayıcılar'}] as {key: ViewMode, label: string}[]).map((mode) => (
-                <button
-                  key={mode.key}
-                  onClick={() => setViewMode(mode.key)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200
-                    ${viewMode === mode.key 
-                      ? 'bg-white/10 text-white' 
-                      : 'text-neutral-500 hover:text-neutral-300'
-                    }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleCopyJson}
-                className="p-2 text-neutral-500 hover:text-white 
-                           hover:bg-white/5 rounded-lg transition-all duration-200"
-                title="JSON Kopyala"
-              >
-                {copiedJson ? (
-                  <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                  </svg>
-                )}
-              </button>
-              <button
-                onClick={handleDownloadJson}
-                className="p-2 text-neutral-500 hover:text-white 
-                           hover:bg-white/5 rounded-lg transition-all duration-200"
-                title="JSON İndir"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          {/* Action buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleCopyJson}
+              className="p-2 text-[#34495E]/50 hover:text-[#34495E] 
+                         hover:bg-[#34495E]/10 rounded-lg transition-all duration-200"
+              title="JSON Kopyala"
+            >
+              {copiedJson ? (
+                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-              </button>
-            </div>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={handleDownloadJson}
+              className="p-2 text-[#34495E]/50 hover:text-[#34495E] 
+                         hover:bg-[#34495E]/10 rounded-lg transition-all duration-200"
+              title="JSON İndir"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -215,7 +189,7 @@ export default function WhoisResult({ result }: WhoisResultProps) {
       {/* Content */}
       <div className="p-5 md:p-6">
         {/* Formatted view */}
-        {viewMode === 'formatted' && result.data && (
+        {result.data && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
             {dataGroups.map((group) => {
               const hasData = group.fields.some(f => f.value);
@@ -224,9 +198,9 @@ export default function WhoisResult({ result }: WhoisResultProps) {
               return (
                 <div 
                   key={group.title}
-                  className="bg-white/[0.02] border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors"
+                  className="bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors"
                 >
-                  <div className="flex items-center gap-2 mb-4 text-neutral-400">
+                  <div className="flex items-center gap-2 mb-4 text-[#34495E]">
                     {group.icon}
                     <h3 className="text-xs uppercase tracking-wider font-medium">{group.title}</h3>
                   </div>
@@ -235,16 +209,16 @@ export default function WhoisResult({ result }: WhoisResultProps) {
                       if (!field.value || field.value === 'N/A') return null;
                       return (
                         <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
-                          <dt className="text-xs text-neutral-500 sm:w-24 flex-shrink-0">
+                          <dt className="text-xs text-[#34495E]/60 sm:w-24 flex-shrink-0">
                             {field.label}
                           </dt>
-                          <dd className="text-sm text-white break-all font-mono">
+                          <dd className="text-sm text-[#34495E] break-all font-mono">
                             {field.isLink ? (
                               <a 
                                 href={field.value.startsWith('http') ? field.value : `https://${field.value}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-neutral-300 hover:text-white animated-underline"
+                                className="text-[#34495E]/80 hover:text-[#34495E] animated-underline"
                               >
                                 {field.value}
                               </a>
@@ -262,67 +236,42 @@ export default function WhoisResult({ result }: WhoisResultProps) {
           </div>
         )}
 
-        {/* No data message for formatted view */}
-        {viewMode === 'formatted' && !result.data && (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-              <svg className="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        {/* Raw Data Button and Section */}
+        {result.data?.rawData && (
+          <div className="mt-6">
+            <button
+              onClick={() => setShowRawData(!showRawData)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#34495E] text-white rounded-xl hover:bg-[#2c3e50] transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${showRawData ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </div>
-            <p className="text-neutral-500">Bu domain için WHOIS verisi bulunamadı</p>
+              <span className="font-medium">Detaylı WHOIS Bilgisi</span>
+            </button>
+            
+            {showRawData && (
+              <div className="mt-4 p-4 bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl">
+                <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
+                  {result.data.rawData
+                    .split('\n')
+                    .filter(line => !line.trim().startsWith('%') && !line.trim().startsWith('#') && !line.trim().startsWith('>>>'))
+                    .join('\n')
+                    .trim()}
+                </pre>
+              </div>
+            )}
           </div>
         )}
 
-        {/* JSON view */}
-        {viewMode === 'json' && (
-          <JsonDisplay data={result} />
-        )}
-
-        {/* Providers view */}
-        {viewMode === 'providers' && (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div className="flex gap-4 text-xs font-mono">
-              <span className="text-success">
-                ✓ {successfulProviders.length} başarılı
-              </span>
-              <span className="text-error">
-                ✗ {failedProviders.length} başarısız
-              </span>
+        {/* No data message */}
+        {!result.data && (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#34495E]/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[#34495E]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
-
-            {/* Provider details */}
-            <div className="space-y-3">
-              {result.providers.map((provider, i) => (
-                <div 
-                  key={i}
-                  className={`p-4 rounded-xl border transition-colors ${
-                    provider.success 
-                      ? 'bg-success/5 border-success/20 hover:border-success/30' 
-                      : 'bg-error/5 border-error/20 hover:border-error/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className={`w-2 h-2 rounded-full ${provider.success ? 'bg-success' : 'bg-error'}`} />
-                      <span className="font-medium text-white">{provider.provider}</span>
-                    </div>
-                    <span className="text-xs font-mono text-neutral-400">
-                      {provider.responseTime}ms
-                    </span>
-                  </div>
-                  {provider.error && (
-                    <p className="text-xs text-error/80">{provider.error}</p>
-                  )}
-                  {provider.success && provider.data && (
-                    <p className="text-xs text-success/80">
-                      {provider.data.domainName || result.domain} için veri alındı
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
+            <p className="text-[#34495E]/70">Bu domain için WHOIS verisi bulunamadı</p>
           </div>
         )}
       </div>

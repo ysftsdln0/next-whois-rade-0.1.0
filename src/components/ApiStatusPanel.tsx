@@ -26,30 +26,30 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
 
   if (!apiStatus) {
     return (
-      <div className="glass-card rounded-2xl p-6 border border-white/5">
+      <div className="glass-card rounded-2xl p-6 border border-gray-200">
         <div className="flex items-center justify-center py-8 gap-3">
-          <div className="w-5 h-5 border-2 border-white/10 border-t-white/50 rounded-full animate-spin" />
-          <span className="text-neutral-500 text-sm">API durumu yükleniyor...</span>
+          <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+          <span className="text-gray-500 text-sm">API durumu yükleniyor...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="glass-card rounded-2xl border border-white/5 overflow-hidden">
+    <div className="glass-card rounded-2xl border border-gray-200 overflow-hidden">
       {/* Header */}
       <div 
-        className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-            <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
           <div>
-            <h3 className="font-medium text-white text-sm">
+            <h3 className="font-medium text-gray-900 text-sm">
               Backend API Durumu
             </h3>
           </div>
@@ -59,17 +59,17 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
           {/* Health indicator */}
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${
             apiStatus.healthyApis === apiStatus.totalApis
-              ? 'bg-success/10 text-success border-success/20'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
               : apiStatus.healthyApis > 0
-              ? 'bg-warning/10 text-warning border-warning/20'
-              : 'bg-error/10 text-error border-error/20'
+              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-red-50 text-red-700 border-red-200'
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${
               apiStatus.healthyApis === apiStatus.totalApis
-                ? 'bg-success'
+                ? 'bg-emerald-500'
                 : apiStatus.healthyApis > 0
-                ? 'bg-warning'
-                : 'bg-error'
+                ? 'bg-amber-500'
+                : 'bg-red-500'
             }`} />
             {apiStatus.healthyApis}/{apiStatus.totalApis} Aktif
           </div>
@@ -80,7 +80,7 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
               e.stopPropagation();
               onRefresh();
             }}
-            className="p-2 text-neutral-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
             title="Yenile"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +90,7 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
 
           {/* Expand/collapse icon */}
           <svg 
-            className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
+            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
@@ -109,18 +109,18 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                 key={endpoint.name}
                 className={`relative p-4 rounded-xl border transition-all hover-lift ${
                   endpoint.healthy
-                    ? 'bg-success/5 border-success/10 hover:border-success/20'
-                    : 'bg-error/5 border-error/10 hover:border-error/20'
+                    ? 'bg-emerald-50 border-emerald-200 hover:border-emerald-300'
+                    : 'bg-red-50 border-red-200 hover:border-red-300'
                 }`}
               >
                 {/* Status indicator */}
                 <div className="absolute top-3 right-3">
                   <span className="relative flex h-2.5 w-2.5">
                     {endpoint.healthy && (
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     )}
                     <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                      endpoint.healthy ? 'bg-success' : 'bg-error'
+                      endpoint.healthy ? 'bg-emerald-500' : 'bg-red-500'
                     }`}></span>
                   </span>
                 </div>
@@ -129,13 +129,13 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                     endpoint.healthy 
-                      ? 'bg-success/10' 
-                      : 'bg-error/10'
+                      ? 'bg-emerald-100' 
+                      : 'bg-red-100'
                   }`}>
                     <svg className={`w-4 h-4 ${
                       endpoint.healthy 
-                        ? 'text-success' 
-                        : 'text-error'
+                        ? 'text-emerald-600' 
+                        : 'text-red-600'
                     }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                     </svg>
@@ -143,12 +143,12 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                   <div>
                     <h4 className={`font-medium text-sm ${
                       endpoint.healthy 
-                        ? 'text-success' 
-                        : 'text-error'
+                        ? 'text-emerald-700' 
+                        : 'text-red-700'
                     }`}>
                       {endpoint.name}
                     </h4>
-                    <p className="text-xs font-mono text-neutral-500">
+                    <p className="text-xs font-mono text-gray-500">
                       :{endpoint.port}
                     </p>
                   </div>
@@ -158,8 +158,8 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                 <div className="flex items-center justify-between">
                   <span className={`inline-flex items-center gap-1.5 text-2xs font-medium ${
                     endpoint.healthy
-                      ? 'text-success'
-                      : 'text-error'
+                      ? 'text-emerald-600'
+                      : 'text-red-600'
                   }`}>
                     {endpoint.healthy ? (
                       <>
@@ -179,7 +179,7 @@ export default function ApiStatusPanel({ apiStatus, onRefresh }: ApiStatusPanelP
                   </span>
 
                   {endpoint.lastCheck && (
-                    <span className="text-2xs text-neutral-600 font-mono">
+                    <span className="text-2xs text-gray-500 font-mono">
                       {new Date(endpoint.lastCheck).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}

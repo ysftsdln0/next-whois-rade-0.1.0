@@ -36,20 +36,20 @@ export default function JsonDisplay({ data }: JsonDisplayProps) {
   return (
     <div className="relative">
       {/* Code block header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-black/50 border-b border-white/5 rounded-t-xl">
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200 rounded-t-xl">
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-white/10" />
-            <div className="w-3 h-3 rounded-full bg-white/10" />
-            <div className="w-3 h-3 rounded-full bg-white/10" />
+            <div className="w-3 h-3 rounded-full bg-gray-300" />
+            <div className="w-3 h-3 rounded-full bg-gray-300" />
+            <div className="w-3 h-3 rounded-full bg-gray-300" />
           </div>
-          <span className="text-2xs text-neutral-500 font-mono ml-2">response.json</span>
+          <span className="text-2xs text-gray-500 font-mono ml-2">response.json</span>
         </div>
-        <span className="text-2xs text-neutral-600 font-mono">JSON</span>
+        <span className="text-2xs text-gray-400 font-mono">JSON</span>
       </div>
       
       <pre 
-        className="bg-black/50 text-neutral-300 p-4 rounded-b-xl overflow-x-auto text-xs font-mono leading-relaxed border border-t-0 border-white/5"
+        className="bg-gray-50 text-gray-700 p-4 rounded-b-xl overflow-x-auto text-xs font-mono leading-relaxed border border-t-0 border-gray-200"
         style={{ maxHeight: '500px' }}
       >
         <code dangerouslySetInnerHTML={{ __html: formattedJson }} />
