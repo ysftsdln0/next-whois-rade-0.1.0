@@ -10,10 +10,6 @@ const url = require('url');
 const PORT = process.env.PORT || 4003;
 const API_NAME = process.env.API_NAME || 'WHOIS-API-3';
 
-// Simple in-memory cache
-const cache = new Map();
-const CACHE_TTL = 300000; // 5 minutes
-
 /**
  * Execute WHOIS command
  */
@@ -26,28 +22,6 @@ function whoisLookup(domain) {
       }
       resolve(stdout || stderr);
     });
-  });
-}
-
-/**
- * Check cache
- */
-function getFromCache(domain) {
-  const cached = cache.get(domain);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-  cache.delete(domain);
-  return null;
-}
-
-/**
- * Set cache
- */
-function setCache(domain, data) {
-  cache.set(domain, {
-    data: data,
-    timestamp: Date.now()
   });
 }
 
@@ -155,19 +129,7 @@ async function handleRequest(req, res) {
       status: 'healthy',
       api: API_NAME,
       port: PORT,
-      cacheSize: cache.size,
       timestamp: new Date().toISOString()
-    }));
-    return;
-  }
-
-  // Cache stats
-  if (path === '/cache') {
-    res.writeHead(200);
-    res.end(JSON.stringify({
-      api: API_NAME,
-      cacheSize: cache.size,
-      domains: Array.from(cache.keys())
     }));
     return;
   }
@@ -175,7 +137,6 @@ async function handleRequest(req, res) {
   // WHOIS lookup
   if (path === '/whois' || path === '/') {
     const domain = parsedUrl.query.domain;
-    const noCache = parsedUrl.query.nocache === 'true';
 
     if (!domain) {
       res.writeHead(400);
@@ -191,23 +152,8 @@ async function handleRequest(req, res) {
       console.log(`[${API_NAME}] Looking up: ${domain}`);
       const startTime = Date.now();
       
-      // Check cache first
-      let parsed;
-      let fromCache = false;
-      
-      if (!noCache) {
-        parsed = getFromCache(domain);
-        if (parsed) {
-          fromCache = true;
-          console.log(`[${API_NAME}] Cache hit for ${domain}`);
-        }
-      }
-
-      if (!parsed) {
-        const rawWhois = await whoisLookup(domain);
-        parsed = parseWhoisResponse(rawWhois);
-        setCache(domain, parsed);
-      }
+      const rawWhois = await whoisLookup(domain);
+      const parsed = parseWhoisResponse(rawWhois);
 
       const duration = Date.now() - startTime;
 
@@ -218,12 +164,11 @@ async function handleRequest(req, res) {
         port: PORT,
         domain: domain,
         queryTime: `${duration}ms`,
-        fromCache: fromCache,
         timestamp: new Date().toISOString(),
         data: parsed
       }));
       
-      console.log(`[${API_NAME}] Completed lookup for ${domain} in ${duration}ms (cache: ${fromCache})`);
+      console.log(`[${API_NAME}] Completed lookup for ${domain} in ${duration}ms`);
     } catch (error) {
       console.error(`[${API_NAME}] Error:`, error.message);
       res.writeHead(500);
@@ -251,7 +196,6 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 ${API_NAME} running on port ${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/health`);
   console.log(`   WHOIS:  http://localhost:${PORT}/whois?domain=example.com`);
-  console.log(`   Cache:  http://localhost:${PORT}/cache`);
 });
 
 process.on('SIGTERM', () => {

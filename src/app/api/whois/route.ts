@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { lookupWhois, getCacheStats, clearCache } from '@/lib/whois-service';
+import { lookupWhois } from '@/lib/whois-service';
 import { log } from '@/lib/logger';
 import type { ApiResponse, WhoisResult } from '@/lib/types';
 
@@ -173,49 +173,6 @@ export async function POST(request: Request) {
       data: result,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    log.error('WHOIS API error', { error: errorMessage });
-
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: 'Internal server error',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * DELETE /api/whois?action=clear-cache
- * Clear the WHOIS cache
- */
-export async function DELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action');
-
-    if (action === 'clear-cache') {
-      clearCache();
-      log.info('Cache cleared via API');
-      
-      return NextResponse.json<ApiResponse<{ message: string }>>({
-        success: true,
-        data: { message: 'Cache cleared successfully' },
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    return NextResponse.json<ApiResponse<null>>(
-      {
-        success: false,
-        error: 'Invalid action',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 400 }
-    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error('WHOIS API error', { error: errorMessage });

@@ -4,7 +4,6 @@
  */
 
 import { log } from './logger';
-import { getCache } from './cache';
 import { isValidDomain, normalizeDomain } from './domain-utils';
 import { queryNativeWhois, queryWhoisXml, queryJsonWhois, queryTredis, isTrDomain } from './providers';
 import type { WhoisData, WhoisResult, ProviderResponse, ProviderConfig } from './types';
@@ -148,7 +147,6 @@ export async function lookupWhois(
   }
 ): Promise<WhoisResult> {
   const config = { ...DEFAULT_CONFIG, ...options?.config };
-  const cache = getCache();
   const timestamp = new Date().toISOString();
 
   // Normalize domain
@@ -165,15 +163,6 @@ export async function lookupWhois(
       providers: [],
       errors: ['Invalid domain name'],
     };
-  }
-
-  // Check cache (unless force refresh)
-  if (!options?.force) {
-    const cachedResult = cache.get(normalizedDomain);
-    if (cachedResult) {
-      log.info('Returning cached WHOIS result', { domain: normalizedDomain });
-      return cachedResult;
-    }
   }
 
   log.info('Starting WHOIS lookup', { domain: normalizedDomain });
@@ -220,10 +209,8 @@ export async function lookupWhois(
     errors,
   };
 
-  // Cache successful results
   if (mergedData) {
-    cache.set(normalizedDomain, result);
-    log.info('WHOIS lookup completed and cached', { 
+    log.info('WHOIS lookup completed', { 
       domain: normalizedDomain,
       successfulProviders: responses.filter(r => r.success).map(r => r.provider),
     });
@@ -235,20 +222,6 @@ export async function lookupWhois(
   }
 
   return result;
-}
-
-/**
- * Get cache statistics
- */
-export function getCacheStats() {
-  return getCache().getStats();
-}
-
-/**
- * Clear the WHOIS cache
- */
-export function clearCache() {
-  getCache().clear();
 }
 
 export default lookupWhois;

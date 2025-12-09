@@ -22,11 +22,6 @@
     "timeout": 10000,
     "retries": 2
   },
-  "cache": {
-    "enabled": true,
-    "ttl": 3600,
-    "maxKeys": 1000
-  },
   "rateLimit": {
     "enabled": true,
     "windowMs": 60000,
