@@ -182,26 +182,31 @@ export default function HomeContent() {
 
   return (
     <BackgroundPaths>
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="w-full container mx-auto px-4 py-12 md:py-20 max-w-5xl">
-          {/* Header */}
-          <header className="text-center mb-16 md:mb-20">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 flex items-center justify-center gap-3 md:gap-4">
-              <span className="text-[#34495E]">
-                WHOIS
-              </span>
-            </h1>
-          </header>
+      <div className="min-h-screen flex flex-col">
+        {/* Fixed height section for header and form - always stays at the same position */}
+        <div className="h-[25vh] flex flex-col items-center justify-end flex-shrink-0 pb-6">
+          <div className="w-full container mx-auto px-4 max-w-5xl">
+            {/* Header */}
+            <header className="text-center mb-6 md:mb-8">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 flex items-center justify-center gap-3 md:gap-4">
+                <span className="text-[#34495E]">
+                  WHOIS
+                </span>
+              </h1>
+            </header>
 
-          {/* Main content */}
-          <div className="space-y-8 w-full">
             {/* Search form */}
             <WhoisForm 
               onSubmit={handleLookup} 
               onClear={handleClear}
               loading={loading} 
             />
+          </div>
+        </div>
 
+        {/* Results section - grows as needed */}
+        <div className="flex-1 w-full container mx-auto px-4 max-w-5xl pt-6 pb-24">
+          <div className="space-y-6 w-full">
             {/* Error message */}
             {error && (
               <div className="animate-fade-in glass-card rounded-2xl p-5 border border-red-200 glow-error">
