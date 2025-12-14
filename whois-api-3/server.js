@@ -5,7 +5,6 @@
 
 const http = require('http');
 const { exec } = require('child_process');
-const url = require('url');
 
 const PORT = process.env.PORT || 4003;
 const API_NAME = process.env.API_NAME || 'WHOIS-API-3';
@@ -119,7 +118,7 @@ async function handleRequest(req, res) {
     return;
   }
 
-  const parsedUrl = url.parse(req.url, true);
+  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const path = parsedUrl.pathname;
 
   // Health check
@@ -136,7 +135,7 @@ async function handleRequest(req, res) {
 
   // WHOIS lookup
   if (path === '/whois' || path === '/') {
-    const domain = parsedUrl.query.domain;
+    const domain = parsedUrl.searchParams.get('domain');
 
     if (!domain) {
       res.writeHead(400);

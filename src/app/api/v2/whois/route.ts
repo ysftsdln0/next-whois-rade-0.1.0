@@ -8,10 +8,13 @@ import apiSelector from '@/lib/api-selector';
 import type { QueryResult } from '@/lib/api-selector';
 import { log } from '@/lib/logger';
 
-// Rate limiting storage
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const RATE_LIMIT_MAX = 30; // 30 requests per minute
+
+const captchaRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const CAPTCHA_RATE_LIMIT_WINDOW = 3600000; // 1 hour
+const CAPTCHA_RATE_LIMIT_THRESHOLD = 5; // After 5 requests, require captcha
 
 interface ApiV2Response {
   success: boolean;
@@ -22,6 +25,7 @@ interface ApiV2Response {
   };
   queryTime?: string;
   fromCache?: boolean;
+  captchaRequired?: boolean;
   data?: {
     raw?: string;
     parsed?: Record<string, unknown>;
@@ -52,6 +56,52 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+function checkCaptchaRequired(ip: string): boolean {
+  const now = Date.now();
+  const limit = captchaRateLimitMap.get(ip);
+
+  if (!limit || now > limit.resetTime) {
+    captchaRateLimitMap.set(ip, { count: 1, resetTime: now + CAPTCHA_RATE_LIMIT_WINDOW });
+    return false;
+  }
+
+  if (limit.count >= CAPTCHA_RATE_LIMIT_THRESHOLD) {
+    return true;
+  }
+
+  limit.count++;
+  return false;
+}
+
+function resetCaptchaLimit(ip: string): void {
+  captchaRateLimitMap.delete(ip);
+}
+
+async function verifyCaptcha(token: string): Promise<boolean> {
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+  
+  if (!secretKey) {
+    log.error('RECAPTCHA_SECRET_KEY not configured');
+    return false;
+  }
+
+  try {
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `secret=${secretKey}&response=${token}`,
+    });
+
+    const data = await response.json();
+    return data.success === true;
+  } catch (error) {
+    log.error('reCAPTCHA verification failed', { error });
+    return false;
+  }
+}
+
 /**
  * GET /api/v2/whois?domain=example.com
  * Lookup WHOIS data using random backend API
@@ -60,6 +110,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const domain = searchParams.get('domain');
+    const captchaToken = searchParams.get('captchaToken');
 
     // Get client IP for rate limiting
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -78,6 +129,42 @@ export async function GET(request: Request) {
         },
         { status: 429 }
       );
+    }
+
+    const captchaRequired = checkCaptchaRequired(ip);
+    
+    if (captchaRequired) {
+      if (!captchaToken) {
+        log.info('Captcha required for IP', { ip });
+        return NextResponse.json<ApiV2Response>(
+          {
+            success: false,
+            usedApi: { name: 'none', port: 0 },
+            captchaRequired: true,
+            error: 'Çok fazla sorgu yaptınız. Lütfen robot olmadığınızı doğrulayın.',
+            timestamp: new Date().toISOString(),
+          },
+          { status: 429 }
+        );
+      }
+
+      const isValidCaptcha = await verifyCaptcha(captchaToken);
+      if (!isValidCaptcha) {
+        log.warn('Invalid captcha token', { ip });
+        return NextResponse.json<ApiV2Response>(
+          {
+            success: false,
+            usedApi: { name: 'none', port: 0 },
+            captchaRequired: true,
+            error: 'Captcha doğrulaması başarısız. Lütfen tekrar deneyin.',
+            timestamp: new Date().toISOString(),
+          },
+          { status: 429 }
+        );
+      }
+
+      resetCaptchaLimit(ip);
+      log.info('Captcha verified successfully', { ip });
     }
 
     // Validate domain parameter

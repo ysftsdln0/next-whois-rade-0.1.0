@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import WhoisForm from '@/components/WhoisForm';
 import WhoisResult from '@/components/WhoisResult';
 import { BackgroundPaths } from '@/components/ui/background-paths';
@@ -16,6 +17,7 @@ usedApi: {
 };
 queryTime?: string;
 fromCache?: boolean;
+captchaRequired?: boolean;
 data?: {
     raw?: string;
     parsed?: Record<string, unknown>;
@@ -38,6 +40,9 @@ export default function HomeContent() {
   const [usedApi, setUsedApi] = useState<{ name: string; port: number } | null>(null);
   const [queryTime, setQueryTime] = useState<string | null>(null);
   const [currentQueryType, setCurrentQueryType] = useState<'domain' | 'ip'>('domain');
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [pendingQuery, setPendingQuery] = useState<{ query: string; queryType: 'domain' | 'ip' } | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   // Set mounted state on client
   useEffect(() => {
@@ -47,7 +52,7 @@ export default function HomeContent() {
   /**
    * Handle WHOIS/IP lookup form submission
    */
-  const handleLookup = useCallback(async (query: string, queryType: 'domain' | 'ip') => {
+  const handleLookup = useCallback(async (query: string, queryType: 'domain' | 'ip', captchaToken?: string) => {
     setLoading(true);
     setCurrentQueryType(queryType);
     setError(null);
@@ -56,12 +61,24 @@ export default function HomeContent() {
     setQueryTime(null);
 
     try {
-      const endpoint = queryType === 'ip' 
+      let endpoint = queryType === 'ip' 
         ? `/api/v2/whois?domain=${encodeURIComponent(query)}&type=ip`
         : `/api/v2/whois?domain=${encodeURIComponent(query)}`;
       
+      if (captchaToken) {
+        endpoint += `&captchaToken=${encodeURIComponent(captchaToken)}`;
+      }
+      
       const response = await fetch(endpoint);
       const data: ApiV2Response = await response.json();
+
+      if (data.captchaRequired) {
+        setPendingQuery({ query, queryType });
+        setShowCaptcha(true);
+        setError(data.error || 'Captcha doğrulaması gerekli');
+        setLoading(false);
+        return;
+      }
 
       if (data.success && data.data) {
         // Set which API was used
@@ -132,7 +149,24 @@ export default function HomeContent() {
     setError(null);
     setUsedApi(null);
     setQueryTime(null);
+    setShowCaptcha(false);
+    setPendingQuery(null);
+    recaptchaRef.current?.reset();
   }, []);
+
+  /**
+   * Handle captcha verification
+   */
+  const handleCaptchaChange = useCallback(async (token: string | null) => {
+    if (token && pendingQuery) {
+      setShowCaptcha(false);
+      setError(null);
+      // Retry the query with the captcha token
+      await handleLookup(pendingQuery.query, pendingQuery.queryType, token);
+      setPendingQuery(null);
+      recaptchaRef.current?.reset();
+    }
+  }, [pendingQuery, handleLookup]);
 
   // Show loading state until mounted on client
   if (!mounted) {
@@ -179,6 +213,20 @@ export default function HomeContent() {
                   </div>
                   <p className="text-red-600 text-sm">{error}</p>
                 </div>
+              </div>
+            )}
+
+            {/* reCAPTCHA widget */}
+            {showCaptcha && (
+              <div className="animate-fade-in flex flex-col items-center gap-4 py-6">
+                <p className="text-[#34495E] text-sm">Devam etmek için robot olmadığınızı doğrulayın:</p>
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+                  onChange={handleCaptchaChange}
+                  theme="light"
+                  size="normal"
+                />
               </div>
             )}
 
