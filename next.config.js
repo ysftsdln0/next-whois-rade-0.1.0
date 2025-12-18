@@ -4,9 +4,6 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['whois-json'],
   },
-  server: {
-    port: 3002,
-  },
 }
 
 module.exports = nextConfig

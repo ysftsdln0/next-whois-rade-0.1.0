@@ -46,7 +46,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
 # Copy config file
-COPY --from=builder /app/config.json ./config.json
+COPY config.json ./config.json
 
 USER nextjs
 

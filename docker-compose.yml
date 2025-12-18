@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # Main Web Application
   web:
     build:
       context: .
@@ -11,7 +8,6 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - LOG_LEVEL=info
       - WHOIS_API_ENDPOINTS=http://whois-api-1:4001,http://whois-api-2:4002,http://whois-api-3:4003
     depends_on:
       - whois-api-1
@@ -20,14 +16,7 @@ services:
     networks:
       - whois-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
-  # WHOIS API Service 1 - Port 4001
   whois-api-1:
     build:
       context: ./whois-api-1
@@ -37,17 +26,10 @@ services:
       - "4001:4001"
     environment:
       - PORT=4001
-      - API_NAME=WHOIS-API-1
     networks:
       - whois-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # WHOIS API Service 2 - Port 4002
   whois-api-2:
     build:
       context: ./whois-api-2
@@ -57,17 +39,10 @@ services:
       - "4002:4002"
     environment:
       - PORT=4002
-      - API_NAME=WHOIS-API-2
     networks:
       - whois-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # WHOIS API Service 3 - Port 4003
   whois-api-3:
     build:
       context: ./whois-api-3
@@ -77,15 +52,9 @@ services:
       - "4003:4003"
     environment:
       - PORT=4003
-      - API_NAME=WHOIS-API-3
     networks:
       - whois-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 networks:
   whois-network:
