@@ -168,8 +168,14 @@ export async function lookupWhois(
   log.info('Starting WHOIS lookup', { domain: normalizedDomain });
 
   // Get enabled providers sorted by priority
+  const isTr = isTrDomain(normalizedDomain);
   const enabledProviders = Object.entries(config.providers)
-    .filter(([, cfg]) => cfg.enabled)
+    .filter(([name, cfg]) => {
+      if (!cfg.enabled) return false;
+      // For .tr domains, skip native provider to avoid conflicts
+      if (isTr && name === 'native') return false;
+      return true;
+    })
     .sort((a, b) => a[1].priority - b[1].priority)
     .map(([name, cfg]) => ({ name, ...cfg }));
 
