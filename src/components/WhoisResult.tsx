@@ -32,12 +32,72 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   };
 
   /**
+   * Check if WHOIS data is privacy protected
+   */
+  const isPrivacyProtected = useMemo(() => {
+    const whoisData = result?.data;
+    if (!whoisData) return false;
+
+    const privacyKeywords = [
+      'redacted for privacy',
+      'privacy',
+      'whoisguard',
+      'domains by proxy',
+      'private registration',
+      'contact privacy',
+      'domain protection',
+      'whois privacy',
+      'proxy',
+      'privacy service',
+      'hidden upon user request'
+    ];
+
+    const fieldsToCheck = [
+      whoisData.registrantName,
+      whoisData.registrantOrganization,
+      whoisData.registrantEmail,
+    ].filter(Boolean).map(f => f!.toLowerCase());
+    
+    for (const field of fieldsToCheck) {
+      if (privacyKeywords.some(keyword => field.includes(keyword))) {
+        return true;
+      }
+    }
+
+    if (whoisData.rawData) {
+        const rawText = whoisData.rawData.toLowerCase();
+        if (privacyKeywords.some(keyword => rawText.includes(keyword))) {
+            return true;
+        }
+    }
+    
+    return false;
+  }, [result.data]);
+
+  /**
    * Group WHOIS data into sections
    */
   const dataGroups = useMemo(() => {
     const data = result.data;
     if (!data) return [];
 
+    const registrantFields = isPrivacyProtected 
+      ? [{ 
+          label: 'Durum', 
+          value: 'Kullanıcı talebiyle gizlenmiştir', 
+          isPrivacyProtected: true 
+        }]
+      : [
+          { label: 'İsim', value: data.registrantName },
+          { label: 'Kuruluş', value: data.registrantOrganization },
+          { label: 'Adres', value: data.registrantStreet },
+          { label: 'Şehir', value: data.registrantCity },
+          { label: 'İl', value: data.registrantState },
+          { label: 'Posta Kodu', value: data.registrantPostalCode },
+          { label: 'Ülke', value: data.registrantCountry },
+          { label: 'E-posta', value: data.registrantEmail },
+          { label: 'Telefon', value: data.registrantPhone },
+        ];
     return [
       {
         title: 'Domain',
@@ -61,11 +121,19 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         ),
-        fields: [
-          { label: 'Oluşturulma', value: formatDate(data.creationDate) },
-          { label: 'Güncelleme', value: formatDate(data.updatedDate) },
-          { label: 'Bitiş', value: formatDate(data.expirationDate) },
-        ],
+        if (isPrivacyProtected : boolean) {
+          fields: [
+            { label: 'Oluşturulma', value: 'Kullanıcı talebiyle gizlenmiştir' },
+            { label: 'Güncelleme', value: 'Kullanıcı talebiyle gizlenmiştir' },
+            { label: 'Bitiş', value: 'Kullanıcı talebiyle gizlenmiştir' },
+          ]
+        } ,else :{
+          fields: [
+            { label: 'Oluşturulma', value: formatDate(data.creationDate) },
+            { label: 'Güncelleme', value: formatDate(data.updatedDate) },
+            { label: 'Bitiş', value: formatDate(data.expirationDate) },
+          ]
+        }
       },
       {
         title: 'Kayıt Sahibi',
@@ -74,17 +142,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         ),
-        fields: [
-          { label: 'İsim', value: data.registrantName },
-          { label: 'Kuruluş', value: data.registrantOrganization },
-          { label: 'Adres', value: data.registrantStreet },
-          { label: 'Şehir', value: data.registrantCity },
-          { label: 'İl', value: data.registrantState },
-          { label: 'Posta Kodu', value: data.registrantPostalCode },
-          { label: 'Ülke', value: data.registrantCountry },
-          { label: 'E-posta', value: data.registrantEmail },
-          { label: 'Telefon', value: data.registrantPhone },
-        ],
+        fields: registrantFields,
       },
       {
         title: 'nameservers',
@@ -105,7 +163,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         fields: data.status?.map((status, i) => ({ label: `Durum ${i + 1}`, value: status })) || [],
       },
     ];
-  }, [result.data]);
+  }, [result.data, isPrivacyProtected]);
 
   return (
     <div className="bg-white rounded-2xl border-2 border-[#34495E] overflow-hidden">
@@ -149,15 +207,27 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
                   <dl className="space-y-2">
                     {group.fields.map((field, i) => {
                       if (!field.value || field.value === 'N/A') return null;
+                      if ('isPrivacyProtected' in field && field.isPrivacyProtected) {
+                        return (
+                          <div key={i} className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <dd className="text-sm font-semibold text-gray-600 font-mono">
+                              {field.value}
+                            </dd>
+                          </div>
+                        )
+                      }
                       return (
                         <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
                           <dt className="text-xs text-[#34495E]/60 sm:w-24 flex-shrink-0">
                             {field.label}
                           </dt>
                           <dd className="text-sm text-[#34495E] break-all font-mono">
-                            {field.isLink ? (
+                            {field.value?.startsWith('http') || field.value?.startsWith('https') ? (
                               <a 
-                                href={field.value.startsWith('http') ? field.value : `https://${field.value}`}
+                                href={field.value}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[#34495E]/80 hover:text-[#34495E] animated-underline"
