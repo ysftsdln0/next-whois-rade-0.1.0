@@ -161,7 +161,7 @@ async function queryTredisSocket(domain: string, timeout: number): Promise<strin
       reject(new Error('tredis sorgu zaman aşımı'));
     }, timeout);
 
-    client.connect(43, 'whois.nic.tr', () => {
+    client.connect(43, 'whois.trabis.tr', () => {
       client.write(`${domain}\r\n`);
     });
 

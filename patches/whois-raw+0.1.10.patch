@@ -1,0 +1,25 @@
+diff --git a/node_modules/whois-raw/servers.json b/node_modules/whois-raw/servers.json
+index 858645b..bfc8a5b 100644
+--- a/node_modules/whois-raw/servers.json
++++ b/node_modules/whois-raw/servers.json
+@@ -695,7 +695,19 @@
+   "tn": "whois.ati.tn",
+   "to": "whois.tonic.to",
+   "tp": null,
+-  "tr": "whois.nic.tr",
++  "tr": "whois.trabis.tr",
++  "com.tr": "whois.trabis.tr",
++  "net.tr": "whois.trabis.tr",
++  "org.tr": "whois.trabis.tr",
++  "edu.tr": "whois.trabis.tr",
++  "gov.tr": "whois.trabis.tr",
++  "biz.tr": "whois.trabis.tr",
++  "info.tr": "whois.trabis.tr",
++  "gen.tr": "whois.trabis.tr",
++  "name.tr": "whois.trabis.tr",
++  "web.tr": "whois.trabis.tr",
++  "tv.tr": "whois.trabis.tr",
++  "tel.tr": "whois.trabis.tr",
+   "tt": null,
+   "tv": "tvwhois.verisign-grs.com",
+   "tw": "whois.twnic.net.tw",
