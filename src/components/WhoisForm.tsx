@@ -43,7 +43,7 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
             id="query"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ornek.com.tr / example.com / 8.8.8.8"
+            placeholder="ornek.com.tr / 8.8.8.8"
             className="w-full pl-12 pr-32 py-4 bg-white border-2 border-[#34495E] rounded-xl 
                        text-[#34495E] placeholder-[#34495E]/60
                        focus:outline-none focus:border-[#34495E]

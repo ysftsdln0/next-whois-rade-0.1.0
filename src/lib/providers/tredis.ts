@@ -1,11 +1,10 @@
-// tredis sağlayıcısı - .tr domainleri için özel whois sorgulama (whois.nic.tr)
+// tredis provider .tr
 
 import { log } from '../logger';
 import { parseDate } from '../domain-utils';
 import type { WhoisData, ProviderResponse } from '../types';
 import * as net from 'net';
 
-// tredis yanıtını yapısal veriye dönüştürür
 function parseTredisResponse(rawData: string, domain: string): WhoisData {
   const data: WhoisData = { domainName: domain, rawData };
   const nameServers: string[] = [];
