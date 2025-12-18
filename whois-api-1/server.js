@@ -40,7 +40,7 @@ function parseWhoisResponse(raw) {
     creationDate: /Creation Date:\s*(.+)/i,
     expirationDate: /Registry Expiry Date:\s*(.+)/i,
     updatedDate: /Updated Date:\s*(.+)/i,
-    nameServers: /Name Server:\s*(.+)/gi,
+    nameServers: /(Name Server|Nameserver|Host Name):\s*(.+)/gi,
     status: /Domain Status:\s*(.+)/gi,
     dnssec: /DNSSEC:\s*(.+)/i,
   };
@@ -50,7 +50,7 @@ function parseWhoisResponse(raw) {
       const matches = [];
       let match;
       while ((match = pattern.exec(raw)) !== null) {
-        matches.push(match[1].trim());
+        matches.push(match[2].trim());
       }
       if (matches.length > 0) {
         result.parsed[key] = matches;

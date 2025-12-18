@@ -122,16 +122,13 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           </svg>
         ),
         fields: isPrivacyProtected
-          ? [
-              { label: 'Oluşturulma', value: 'Kullanıcı talebiyle gizlenmiştir' },
-              { label: 'Güncelleme', value: 'Kullanıcı talebiyle gizlenmiştir' },
-              { label: 'Bitiş', value: 'Kullanıcı talebiyle gizlenmiştir' },
-            ]
+          ? []
           : [
               { label: 'Oluşturulma', value: formatDate(data.creationDate) },
               { label: 'Güncelleme', value: formatDate(data.updatedDate) },
               { label: 'Bitiş', value: formatDate(data.expirationDate) },
             ],
+        isPrivacyProtected: isPrivacyProtected,
       },
       {
         title: 'Kayıt Sahibi',
@@ -191,7 +188,8 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
             {dataGroups.map((group) => {
               const hasData = group.fields.some(f => f.value);
-              if (!hasData) return null;
+              // Always show Tarihler if privacy is enabled, even if fields are empty
+              if (!hasData && !(group.title === 'Tarihler' && group.isPrivacyProtected)) return null;
 
               return (
                 <div 
@@ -202,6 +200,15 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
                     {group.icon}
                     <h3 className="text-xs uppercase tracking-wider font-medium">{group.title}</h3>
                   </div>
+                  {/* Tarihler privacy message */}
+                  {group.title === 'Tarihler' && group.isPrivacyProtected && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-gray-600 font-mono">Kullanıcı talebiyle gizlenmiştir</span>
+                    </div>
+                  )}
                   <dl className="space-y-2">
                     {group.fields.map((field, i) => {
                       if (!field.value || field.value === 'N/A') return null;

@@ -53,7 +53,7 @@ function parseWhoisResponse(raw) {
 
   // Array patterns
   const arrayPatterns = {
-    nameServers: /Name Server:\s*(.+)/gi,
+    nameServers: /(Name Server|Nameserver|Host Name):\s*(.+)/gi,
     status: /Domain Status:\s*(.+)/gi,
   };
 
@@ -78,7 +78,7 @@ function parseWhoisResponse(raw) {
     const matches = [];
     let match;
     while ((match = pattern.exec(raw)) !== null) {
-      matches.push(match[1].trim());
+      matches.push(key === 'nameServers' ? match[2].trim() : match[1].trim());
     }
     if (matches.length > 0) {
       result.parsed[key] = matches;
