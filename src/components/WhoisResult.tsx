@@ -121,19 +121,17 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         ),
-        if (isPrivacyProtected : boolean) {
-          fields: [
-            { label: 'Oluşturulma', value: 'Kullanıcı talebiyle gizlenmiştir' },
-            { label: 'Güncelleme', value: 'Kullanıcı talebiyle gizlenmiştir' },
-            { label: 'Bitiş', value: 'Kullanıcı talebiyle gizlenmiştir' },
-          ]
-        } ,else :{
-          fields: [
-            { label: 'Oluşturulma', value: formatDate(data.creationDate) },
-            { label: 'Güncelleme', value: formatDate(data.updatedDate) },
-            { label: 'Bitiş', value: formatDate(data.expirationDate) },
-          ]
-        }
+        fields: isPrivacyProtected
+          ? [
+              { label: 'Oluşturulma', value: 'Kullanıcı talebiyle gizlenmiştir' },
+              { label: 'Güncelleme', value: 'Kullanıcı talebiyle gizlenmiştir' },
+              { label: 'Bitiş', value: 'Kullanıcı talebiyle gizlenmiştir' },
+            ]
+          : [
+              { label: 'Oluşturulma', value: formatDate(data.creationDate) },
+              { label: 'Güncelleme', value: formatDate(data.updatedDate) },
+              { label: 'Bitiş', value: formatDate(data.expirationDate) },
+            ],
       },
       {
         title: 'Kayıt Sahibi',

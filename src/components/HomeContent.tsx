@@ -308,20 +308,20 @@ export default function HomeContent() {
     {/* Footer */}
     <footer className="fixed bottom-0 left-0 right-0 py-6 bg-white/80 backdrop-blur-sm">
       <div className="text-center">
-        <p className="text-gray-500 text-sm flex items-center justify-center gap-2">
-        <a href="https://who.gen.tr" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 font-bold">
-          who.gen.tr
-        </a>
-        sizin çok işinize yarasın diye 
-        <a href="https://radehosting.com" target="_blank" rel="noopener noreferrer">
-          <img 
-            src="/rade-logo.png" 
-            alt="RADE" 
-            className="h-4 w-auto inline-block"
-          />
-        </a>
-        tarafından hazırlandı.
-        </p>
+        <div className="text-gray-500 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+          <a href="https://who.gen.tr" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 font-bold">
+            who.gen.tr
+          </a>
+          <span>sizin çok işinize yarasın diye</span>
+          <a href="https://radehosting.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+            <img 
+              src="/rade-logo.png" 
+              alt="RADE" 
+              className="h-4 w-auto inline-block"
+            />
+          </a>
+          <span>tarafından hazırlandı.</span>
+        </div>
       </div>
     </footer>
     </BackgroundPaths>
