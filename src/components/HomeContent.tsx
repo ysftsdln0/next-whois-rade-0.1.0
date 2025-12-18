@@ -9,23 +9,23 @@ import type { WhoisResult as WhoisResultType } from '@/lib/types';
 
 // API v2 Response type
 interface ApiV2Response {
-success: boolean;
-domain?: string;
-usedApi: {
+  success: boolean;
+  domain?: string;
+  usedApi: {
     name: string;
     port: number;
-};
-queryTime?: string;
-fromCache?: boolean;
-captchaRequired?: boolean;
-data?: {
+  };
+  queryTime?: string;
+  fromCache?: boolean;
+  captchaRequired?: boolean;
+  data?: {
     raw?: string;
     parsed?: Record<string, unknown>;
     dates?: Record<string, string>;
     contacts?: Record<string, Record<string, string>>;
-};
-error?: string;
-timestamp: string;
+  };
+  error?: string;
+  timestamp: string;
 }
 
 /**
@@ -41,7 +41,7 @@ export default function HomeContent() {
   const [queryTime, setQueryTime] = useState<string | null>(null);
   const [currentQueryType, setCurrentQueryType] = useState<'domain' | 'ip'>('domain');
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [pendingQuery, setPendingQuery] = useState<{ query: string; queryType: 'domain' | 'ip' } | null>(null);
+  const [pendingQuery, setPendingQuery] = useState<{ query: string } | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   // Set mounted state on client
@@ -50,96 +50,145 @@ export default function HomeContent() {
   }, []);
 
   /**
+   * Detect whether the query is an IP address or a domain
+   */
+  const detectQueryType = (query: string): 'domain' | 'ip' => {
+    const trimmed = query.trim();
+    // Simple IPv4 check
+    const ipv4Regex =
+      /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+    // Simple IPv6 check
+    const ipv6Regex =
+      /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(::1)|(::)|([0-9a-fA-F]{1,4}::[0-9a-fA-F]{1,4}))$/;
+
+    if (ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed)) {
+      return 'ip';
+    }
+    return 'domain';
+  };
+
+  /**
    * Handle WHOIS/IP lookup form submission
    */
-  const handleLookup = useCallback(async (query: string, queryType: 'domain' | 'ip', captchaToken?: string) => {
-    setLoading(true);
-    setCurrentQueryType(queryType);
-    setError(null);
-    setResult(null);
-    setUsedApi(null);
-    setQueryTime(null);
+  const handleLookup = useCallback(
+    async (query: string, captchaToken?: string) => {
+      const inferredType = detectQueryType(query);
+      setLoading(true);
+      setCurrentQueryType(inferredType);
+      setError(null);
+      setResult(null);
+      setUsedApi(null);
+      setQueryTime(null);
 
-    try {
-      let endpoint = queryType === 'ip' 
-        ? `/api/v2/whois?domain=${encodeURIComponent(query)}&type=ip`
-        : `/api/v2/whois?domain=${encodeURIComponent(query)}`;
-      
-      if (captchaToken) {
-        endpoint += `&captchaToken=${encodeURIComponent(captchaToken)}`;
-      }
-      
-      const response = await fetch(endpoint);
-      const data: ApiV2Response = await response.json();
+      try {
+        let endpoint =
+          inferredType === 'ip'
+            ? `/api/v2/whois?domain=${encodeURIComponent(query)}&type=ip`
+            : `/api/v2/whois?domain=${encodeURIComponent(query)}`;
 
-      if (data.captchaRequired) {
-        setPendingQuery({ query, queryType });
-        setShowCaptcha(true);
-        setError(data.error || 'Captcha doğrulaması gerekli');
+        if (captchaToken) {
+          endpoint += `&captchaToken=${encodeURIComponent(captchaToken)}`;
+        }
+
+        const response = await fetch(endpoint);
+        const data: ApiV2Response = await response.json();
+
+        if (data.captchaRequired) {
+          setPendingQuery({ query });
+          setShowCaptcha(true);
+          setError(data.error || 'Captcha doğrulaması gerekli');
+          setLoading(false);
+          return;
+        }
+
+        if (data.success && data.data) {
+          // Set which API was used
+          setUsedApi(data.usedApi);
+          setQueryTime(data.queryTime || null);
+
+          // Check if domain/IP was actually found (not just raw data with "No match")
+          const rawData = data.data.raw || '';
+          const parsed = data.data.parsed || {};
+          const isNotFound =
+            rawData.toLowerCase().includes('no match') ||
+            rawData.toLowerCase().includes('not found') ||
+            rawData.toLowerCase().includes('no entries found') ||
+            Object.keys(parsed).length === 0;
+
+          // Convert to WhoisResult format
+          const whoisResult: WhoisResultType = {
+            domain: data.domain || query,
+            timestamp: new Date().toISOString(),
+            cached: data.fromCache || false,
+            providers: [
+              {
+                provider: data.usedApi.name,
+                success: !isNotFound,
+                responseTime: parseInt(data.queryTime || '0', 10),
+                data: isNotFound
+                  ? undefined
+                  : {
+                      domainName:
+                        (data.data.parsed?.domainName as string) || query,
+                      registrar: data.data.parsed
+                        ?.registrar as string,
+                      registrarUrl: data.data.parsed
+                        ?.registrarUrl as string,
+                      creationDate:
+                        data.data.dates?.created ||
+                        (data.data.parsed?.creationDate as string),
+                      expirationDate:
+                        data.data.dates?.expires ||
+                        (data.data.parsed?.expirationDate as string),
+                      updatedDate:
+                        data.data.dates?.updated ||
+                        (data.data.parsed?.updatedDate as string),
+                      nameServers: data.data.parsed
+                        ?.nameServers as string[],
+                      status: data.data.parsed?.status as string[],
+                      dnssec: data.data.parsed?.dnssec as string,
+                      rawData: data.data.raw,
+                    },
+              },
+            ],
+            data: isNotFound
+              ? null
+              : {
+                  domainName:
+                    (data.data.parsed?.domainName as string) || query,
+                  registrar: data.data.parsed?.registrar as string,
+                  registrarUrl: data.data.parsed
+                    ?.registrarUrl as string,
+                  creationDate:
+                    data.data.dates?.created ||
+                    (data.data.parsed?.creationDate as string),
+                  expirationDate:
+                    data.data.dates?.expires ||
+                    (data.data.parsed?.expirationDate as string),
+                  updatedDate:
+                    data.data.dates?.updated ||
+                    (data.data.parsed?.updatedDate as string),
+                  nameServers: data.data.parsed
+                    ?.nameServers as string[],
+                  status: data.data.parsed?.status as string[],
+                  dnssec: data.data.parsed?.dnssec as string,
+                  rawData: data.data.raw,
+                },
+            errors: [],
+          };
+          setResult(whoisResult);
+        } else {
+          setError(data.error || 'Sorgu başarısız oldu');
+          setUsedApi(data.usedApi);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Ağ hatası oluştu');
+      } finally {
         setLoading(false);
-        return;
       }
-
-      if (data.success && data.data) {
-        // Set which API was used
-        setUsedApi(data.usedApi);
-        setQueryTime(data.queryTime || null);
-
-        // Check if domain was actually found (not just raw data with "No match")
-        const rawData = data.data.raw || '';
-        const parsed = data.data.parsed || {};
-        const isNotFound = rawData.toLowerCase().includes('no match') || 
-                          rawData.toLowerCase().includes('not found') ||
-                          rawData.toLowerCase().includes('no entries found') ||
-                          Object.keys(parsed).length === 0;
-
-        // Convert to WhoisResult format
-        const whoisResult: WhoisResultType = {
-          domain: data.domain || query,
-          timestamp: new Date().toISOString(),
-          cached: data.fromCache || false,
-          providers: [{
-            provider: data.usedApi.name,
-            success: !isNotFound,
-            responseTime: parseInt(data.queryTime || '0'),
-            data: isNotFound ? undefined : {
-              domainName: data.data.parsed?.domainName as string || query,
-              registrar: data.data.parsed?.registrar as string,
-              registrarUrl: data.data.parsed?.registrarUrl as string,
-              creationDate: data.data.dates?.created || data.data.parsed?.creationDate as string,
-              expirationDate: data.data.dates?.expires || data.data.parsed?.expirationDate as string,
-              updatedDate: data.data.dates?.updated || data.data.parsed?.updatedDate as string,
-              nameServers: data.data.parsed?.nameServers as string[],
-              status: data.data.parsed?.status as string[],
-              dnssec: data.data.parsed?.dnssec as string,
-              rawData: data.data.raw,
-            }
-          }],
-          data: isNotFound ? null : {
-            domainName: data.data.parsed?.domainName as string || query,
-            registrar: data.data.parsed?.registrar as string,
-            registrarUrl: data.data.parsed?.registrarUrl as string,
-            creationDate: data.data.dates?.created || data.data.parsed?.creationDate as string,
-            expirationDate: data.data.dates?.expires || data.data.parsed?.expirationDate as string,
-            updatedDate: data.data.dates?.updated || data.data.parsed?.updatedDate as string,
-            nameServers: data.data.parsed?.nameServers as string[],
-            status: data.data.parsed?.status as string[],
-            dnssec: data.data.parsed?.dnssec as string,
-            rawData: data.data.raw,
-          },
-          errors: [],
-        };
-        setResult(whoisResult);
-      } else {
-        setError(data.error || 'Sorgu başarısız oldu');
-        setUsedApi(data.usedApi);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ağ hatası oluştu');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [detectQueryType]
+  );
 
   /**
    * Clear current results
@@ -162,7 +211,7 @@ export default function HomeContent() {
       setShowCaptcha(false);
       setError(null);
       // Retry the query with the captcha token
-      await handleLookup(pendingQuery.query, pendingQuery.queryType, token);
+      await handleLookup(pendingQuery.query, token);
       setPendingQuery(null);
       recaptchaRef.current?.reset();
     }

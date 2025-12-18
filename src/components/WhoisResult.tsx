@@ -13,36 +13,7 @@ interface WhoisResultProps {
  * Shows lookup results in multiple formats
  */
 export default function WhoisResult({ result, queryType = 'domain' }: WhoisResultProps) {
-  const [copiedJson, setCopiedJson] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
-
-  /**
-   * Copy JSON to clipboard
-   */
-  const handleCopyJson = async () => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(result, null, 2));
-      setCopiedJson(true);
-      setTimeout(() => setCopiedJson(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  /**
-   * Download JSON file
-   */
-  const handleDownloadJson = () => {
-    const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `whois-${result.domain}-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   /**
    * Format date string for display
@@ -153,36 +124,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
                 {new Date(result.timestamp).toLocaleString()}
               </p>
             </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleCopyJson}
-              className="p-2 text-[#34495E]/50 hover:text-[#34495E] 
-                         hover:bg-[#34495E]/10 rounded-lg transition-all duration-200"
-              title="JSON Kopyala"
-            >
-              {copiedJson ? (
-                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-              )}
-            </button>
-            <button
-              onClick={handleDownloadJson}
-              className="p-2 text-[#34495E]/50 hover:text-[#34495E] 
-                         hover:bg-[#34495E]/10 rounded-lg transition-all duration-200"
-              title="JSON İndir"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
