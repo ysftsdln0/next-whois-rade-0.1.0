@@ -15,6 +15,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Ensure public folder exists (in case .dockerignore or copy didn't include it)
+RUN mkdir -p public
+
 # Build the application
 # Accept build args for NEXT_PUBLIC_ variables
 ARG NEXT_PUBLIC_RECAPTCHA_SITE_KEY
@@ -25,6 +28,7 @@ ENV NEXT_PUBLIC_RECAPTCHA_SECRET_KEY=${NEXT_PUBLIC_RECAPTCHA_SECRET_KEY}
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=""
 RUN npm run build
 
 # Production stage
@@ -49,11 +53,11 @@ ENV HOSTNAME="0.0.0.0"
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy public folder if it exists
-COPY --from=builder /app/public ./public
+# Copy public folder from builder (ensure it exists)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy config file
-COPY config.json ./config.json
+# Copy config file from builder
+COPY --from=builder --chown=nextjs:nodejs /app/config.json ./config.json
 
 USER nextjs
 
