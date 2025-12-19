@@ -79,7 +79,7 @@ function resetCaptchaLimit(ip: string): void {
 
 async function verifyCaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-  
+
   if (!secretKey) {
     log.error('RECAPTCHA_SECRET_KEY not configured');
     return false;
@@ -113,9 +113,9 @@ export async function GET(request: Request) {
     const captchaToken = searchParams.get('captchaToken');
 
     // Get client IP for rate limiting
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-               request.headers.get('x-real-ip') || 
-               'unknown';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
 
     // Check rate limit
     if (!checkRateLimit(ip)) {
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
     }
 
     const captchaRequired = checkCaptchaRequired(ip);
-    
+
     if (captchaRequired) {
       if (!captchaToken) {
         log.info('Captcha required for IP', { ip });
@@ -180,8 +180,11 @@ export async function GET(request: Request) {
       );
     }
 
+    // Get query type (domain or ip)
+    const queryType = searchParams.get('type') || 'domain';
+
     // Query using random API
-    const result: QueryResult = await apiSelector.query(domain);
+    const result: QueryResult = await apiSelector.query(domain, queryType);
 
     if (!result.success || !result.data) {
       return NextResponse.json<ApiV2Response>(

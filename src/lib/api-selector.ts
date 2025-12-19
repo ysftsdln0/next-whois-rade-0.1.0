@@ -53,7 +53,7 @@ class ApiSelector {
    */
   private initializeEndpoints(): void {
     const envEndpoints = process.env.WHOIS_API_ENDPOINTS;
-    
+
     if (envEndpoints) {
       // Parse from environment variable (comma-separated)
       const urls = envEndpoints.split(',').map(u => u.trim());
@@ -77,7 +77,7 @@ class ApiSelector {
       ];
     }
 
-    logger.info('API endpoints initialized', { 
+    logger.info('API endpoints initialized', {
       count: this.endpoints.length,
       endpoints: this.endpoints.map(e => ({ name: e.name, url: e.url }))
     });
@@ -113,11 +113,11 @@ class ApiSelector {
     });
 
     await Promise.all(checks);
-    
+
     const healthyCount = this.endpoints.filter(e => e.healthy).length;
-    logger.debug('Health check completed', { 
-      total: this.endpoints.length, 
-      healthy: healthyCount 
+    logger.debug('Health check completed', {
+      total: this.endpoints.length,
+      healthy: healthyCount
     });
   }
 
@@ -126,7 +126,7 @@ class ApiSelector {
    */
   private getRandomEndpoint(): ApiEndpoint | null {
     const healthyEndpoints = this.endpoints.filter(e => e.healthy);
-    
+
     if (healthyEndpoints.length === 0) {
       // If no healthy endpoints, try all endpoints
       logger.warn('No healthy endpoints available, trying all');
@@ -141,7 +141,7 @@ class ApiSelector {
   /**
    * Query WHOIS using a random API
    */
-  async query(domain: string): Promise<QueryResult> {
+  async query(domain: string, queryType: string = 'domain'): Promise<QueryResult> {
     const endpoint = this.getRandomEndpoint();
 
     if (!endpoint) {
@@ -153,17 +153,18 @@ class ApiSelector {
       };
     }
 
-    logger.info(`Using ${endpoint.name} for WHOIS query`, { 
-      domain, 
+    logger.info(`Using ${endpoint.name} for WHOIS query`, {
+      domain,
+      queryType,
       api: endpoint.name,
-      port: endpoint.port 
+      port: endpoint.port
     });
 
     try {
       const response = await axios.get<WhoisApiResponse>(
         `${endpoint.url}/whois`,
         {
-          params: { domain },
+          params: { domain, type: queryType },
           timeout: 30000
         }
       );
@@ -175,9 +176,9 @@ class ApiSelector {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error(`WHOIS query failed on ${endpoint.name}`, { 
-        domain, 
-        error: errorMessage 
+      logger.error(`WHOIS query failed on ${endpoint.name}`, {
+        domain,
+        error: errorMessage
       });
 
       // Mark endpoint as unhealthy
@@ -186,12 +187,12 @@ class ApiSelector {
       // Try another endpoint
       const fallbackEndpoint = this.getRandomEndpoint();
       if (fallbackEndpoint && fallbackEndpoint.name !== endpoint.name) {
-        logger.info(`Retrying with fallback API ${fallbackEndpoint.name}`, { domain });
+        logger.info(`Retrying with fallback API ${fallbackEndpoint.name}`, { domain, queryType });
         try {
           const fallbackResponse = await axios.get<WhoisApiResponse>(
             `${fallbackEndpoint.url}/whois`,
             {
-              params: { domain },
+              params: { domain, type: queryType },
               timeout: 30000
             }
           );

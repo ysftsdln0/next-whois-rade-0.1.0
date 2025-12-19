@@ -128,52 +128,52 @@ export default function HomeContent() {
                 data: isNotFound
                   ? undefined
                   : {
-                      domainName:
-                        (data.data.parsed?.domainName as string) || query,
-                      registrar: data.data.parsed
-                        ?.registrar as string,
-                      registrarUrl: data.data.parsed
-                        ?.registrarUrl as string,
-                      creationDate:
-                        data.data.dates?.created ||
-                        (data.data.parsed?.creationDate as string),
-                      expirationDate:
-                        data.data.dates?.expires ||
-                        (data.data.parsed?.expirationDate as string),
-                      updatedDate:
-                        data.data.dates?.updated ||
-                        (data.data.parsed?.updatedDate as string),
-                      nameServers: data.data.parsed
-                        ?.nameServers as string[],
-                      status: data.data.parsed?.status as string[],
-                      dnssec: data.data.parsed?.dnssec as string,
-                      rawData: data.data.raw,
-                    },
+                    domainName:
+                      (data.data.parsed?.domainName as string) || query,
+                    registrar: data.data.parsed
+                      ?.registrar as string,
+                    registrarUrl: data.data.parsed
+                      ?.registrarUrl as string,
+                    creationDate:
+                      data.data.dates?.created ||
+                      (data.data.parsed?.creationDate as string),
+                    expirationDate:
+                      data.data.dates?.expires ||
+                      (data.data.parsed?.expirationDate as string),
+                    updatedDate:
+                      data.data.dates?.updated ||
+                      (data.data.parsed?.updatedDate as string),
+                    nameServers: data.data.parsed
+                      ?.nameServers as string[],
+                    status: data.data.parsed?.status as string[],
+                    dnssec: data.data.parsed?.dnssec as string,
+                    rawData: data.data.raw,
+                  },
               },
             ],
             data: isNotFound
               ? null
               : {
-                  domainName:
-                    (data.data.parsed?.domainName as string) || query,
-                  registrar: data.data.parsed?.registrar as string,
-                  registrarUrl: data.data.parsed
-                    ?.registrarUrl as string,
-                  creationDate:
-                    data.data.dates?.created ||
-                    (data.data.parsed?.creationDate as string),
-                  expirationDate:
-                    data.data.dates?.expires ||
-                    (data.data.parsed?.expirationDate as string),
-                  updatedDate:
-                    data.data.dates?.updated ||
-                    (data.data.parsed?.updatedDate as string),
-                  nameServers: data.data.parsed
-                    ?.nameServers as string[],
-                  status: data.data.parsed?.status as string[],
-                  dnssec: data.data.parsed?.dnssec as string,
-                  rawData: data.data.raw,
-                },
+                domainName:
+                  (data.data.parsed?.domainName as string) || query,
+                registrar: data.data.parsed?.registrar as string,
+                registrarUrl: data.data.parsed
+                  ?.registrarUrl as string,
+                creationDate:
+                  data.data.dates?.created ||
+                  (data.data.parsed?.creationDate as string),
+                expirationDate:
+                  data.data.dates?.expires ||
+                  (data.data.parsed?.expirationDate as string),
+                updatedDate:
+                  data.data.dates?.updated ||
+                  (data.data.parsed?.updatedDate as string),
+                nameServers: data.data.parsed
+                  ?.nameServers as string[],
+                status: data.data.parsed?.status as string[],
+                dnssec: data.data.parsed?.dnssec as string,
+                rawData: data.data.raw,
+              },
             errors: [],
           };
           setResult(whoisResult);
@@ -245,10 +245,10 @@ export default function HomeContent() {
             </header>
 
             {/* Search form */}
-            <WhoisForm 
-              onSubmit={handleLookup} 
+            <WhoisForm
+              onSubmit={handleLookup}
               onClear={handleClear}
-              loading={loading} 
+              loading={loading}
             />
           </div>
         </div>
@@ -271,12 +271,12 @@ export default function HomeContent() {
             )}
 
             {/* reCAPTCHA widget */}
-            {showCaptcha && (
+            {showCaptcha && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
               <div className="animate-fade-in flex flex-col items-center gap-4 py-6">
                 <p className="text-[#34495E] text-sm">Devam etmek için robot olmadığınızı doğrulayın:</p>
                 <ReCAPTCHA
                   ref={recaptchaRef}
-                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                   onChange={handleCaptchaChange}
                   theme="light"
                   size="normal"
@@ -305,25 +305,25 @@ export default function HomeContent() {
         </div>
       </div>
 
-    {/* Footer */}
-    <footer className="fixed bottom-0 left-0 right-0 py-6 bg-white/80 backdrop-blur-sm">
-      <div className="text-center">
-        <div className="text-gray-500 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-          <a href="https://who.gen.tr" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 font-bold">
-            who.gen.tr
-          </a>
-          <span>sizin çok işinize yarasın diye</span>
-          <a href="https://radehosting.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
-            <img 
-              src="/rade-logo.png" 
-              alt="RADE" 
-              className="h-4 w-auto inline-block"
-            />
-          </a>
-          <span>tarafından hazırlandı.</span>
+      {/* Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 py-6 bg-white/80 backdrop-blur-sm">
+        <div className="text-center">
+          <div className="text-gray-500 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+            <a href="https://who.gen.tr" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 font-bold">
+              who.gen.tr
+            </a>
+            <span>sizin çok işinize yarasın diye</span>
+            <a href="https://radehosting.com" target="_blank" rel="noopener noreferrer" className="flex items-center">
+              <img
+                src="/rade-logo.png"
+                alt="RADE"
+                className="h-4 w-auto inline-block"
+              />
+            </a>
+            <span>tarafından hazırlandı.</span>
+          </div>
         </div>
-      </div>
-    </footer>
+      </footer>
     </BackgroundPaths>
   );
 }

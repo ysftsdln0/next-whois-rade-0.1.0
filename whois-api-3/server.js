@@ -104,6 +104,65 @@ function parseWhoisResponse(raw) {
 }
 
 /**
+ * Parse raw WHOIS response for IP addresses
+ */
+function parseIpWhoisResponse(raw) {
+  const result = {
+    raw: raw,
+    parsed: {},
+    dates: {},
+    contacts: {}
+  };
+
+  const patterns = {
+    netName: /NetName:\s*(.+)/i,
+    netRange: /NetRange:\s*(.+)/i,
+    cidr: /CIDR:\s*(.+)/i,
+    orgName: /OrgName:\s*(.+)/i,
+    orgId: /OrgId:\s*(.+)/i,
+    address: /Address:\s*(.+)/i,
+    city: /City:\s*(.+)/i,
+    country: /Country:\s*(.+)/i,
+    comment: /Comment:\s*(.+)/gi,
+    abuseEmail: /OrgAbuseEmail:\s*(.+)/i,
+    techEmail: /OrgTechEmail:\s*(.+)/i,
+  };
+
+  // Date patterns for IP
+  const datePatterns = {
+    regDate: /RegDate:\s*(.+)/i,
+    updated: /Updated:\s*(.+)/i,
+  };
+
+  for (const [key, pattern] of Object.entries(patterns)) {
+    if (key === 'comment') {
+      const matches = [];
+      let match;
+      while ((match = pattern.exec(raw)) !== null) {
+        matches.push(match[1].trim());
+      }
+      if (matches.length > 0) {
+        result.parsed[key] = matches;
+      }
+    } else {
+      const match = raw.match(pattern);
+      if (match) {
+        result.parsed[key] = match[1].trim();
+      }
+    }
+  }
+
+  for (const [key, pattern] of Object.entries(datePatterns)) {
+    const match = raw.match(pattern);
+    if (match) {
+      result.dates[key] = match[1].trim();
+    }
+  }
+
+  return result;
+}
+
+/**
  * HTTP Request handler
  */
 async function handleRequest(req, res) {
@@ -136,6 +195,7 @@ async function handleRequest(req, res) {
   // WHOIS lookup
   if (path === '/whois' || path === '/') {
     const domain = parsedUrl.searchParams.get('domain');
+    const queryType = parsedUrl.searchParams.get('type') || 'domain';
 
     if (!domain) {
       res.writeHead(400);
@@ -148,11 +208,15 @@ async function handleRequest(req, res) {
     }
 
     try {
-      console.log(`[${API_NAME}] Looking up: ${domain}`);
+      console.log(`[${API_NAME}] Looking up ${queryType}: ${domain}`);
       const startTime = Date.now();
-      
+
       const rawWhois = await whoisLookup(domain);
-      const parsed = parseWhoisResponse(rawWhois);
+
+      // Use different parsing based on query type
+      const parsed = queryType === 'ip'
+        ? parseIpWhoisResponse(rawWhois)
+        : parseWhoisResponse(rawWhois);
 
       const duration = Date.now() - startTime;
 
@@ -162,12 +226,13 @@ async function handleRequest(req, res) {
         api: API_NAME,
         port: PORT,
         domain: domain,
+        type: queryType,
         queryTime: `${duration}ms`,
         timestamp: new Date().toISOString(),
         data: parsed
       }));
-      
-      console.log(`[${API_NAME}] Completed lookup for ${domain} in ${duration}ms`);
+
+      console.log(`[${API_NAME}] Completed ${queryType} lookup for ${domain} in ${duration}ms`);
     } catch (error) {
       console.error(`[${API_NAME}] Error:`, error.message);
       res.writeHead(500);
