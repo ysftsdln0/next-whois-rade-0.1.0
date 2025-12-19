@@ -4,10 +4,11 @@
   "description": "A comprehensive WHOIS lookup service with parallel API queries",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS=--use-system-ca next dev",
     "build": "next build",
     "start": "next start -p 3000 -H 0.0.0.0",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -35,8 +36,10 @@
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.0.4",
+    "patch-package": "^8.0.1",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "whois-raw": "^0.1.10"
   }
 }

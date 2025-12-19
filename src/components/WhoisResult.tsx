@@ -112,6 +112,9 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           { label: 'Kayıt Firması URL', value: data.registrarUrl, isLink: true },
           { label: 'Kayıt Firması IANA ID', value: data.registrarIanaId },
           { label: 'DNSSEC', value: data.dnssec },
+          ...(Array.isArray(data.nameServers) && data.nameServers.length > 0
+            ? data.nameServers.map((ns, i) => ({ label: `Nameserver ${i + 1}`, value: ns }))
+            : []),
         ],
       },
       {
