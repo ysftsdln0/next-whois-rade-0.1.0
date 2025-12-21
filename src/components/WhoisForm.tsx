@@ -8,16 +8,9 @@ interface WhoisFormProps {
   loading: boolean;
 }
 
-/**
- * WHOIS lookup form component
- * Provides domain/IP input and search controls
- */
 export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps) {
   const [query, setQuery] = useState('');
 
-  /**
-   * Handle form submission
-   */
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();
@@ -30,7 +23,6 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto space-y-4">
-      {/* Input with button */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#34495E]">

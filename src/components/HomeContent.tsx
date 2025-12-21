@@ -7,7 +7,6 @@ import WhoisResult from '@/components/WhoisResult';
 import { BackgroundPaths } from '@/components/ui/background-paths';
 import type { WhoisResult as WhoisResultType } from '@/lib/types';
 
-// API v2 Response type
 interface ApiV2Response {
   success: boolean;
   domain?: string;
@@ -27,11 +26,6 @@ interface ApiV2Response {
   error?: string;
   timestamp: string;
 }
-
-/**
- * Home page content component
- * Provides the UI for WHOIS lookups
- */
 export default function HomeContent() {
   const [mounted, setMounted] = useState(false);
   const [result, setResult] = useState<WhoisResultType | null>(null);
@@ -44,20 +38,13 @@ export default function HomeContent() {
   const [pendingQuery, setPendingQuery] = useState<{ query: string } | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
-  // Set mounted state on client
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  /**
-   * Detect whether the query is an IP address or a domain
-   */
   const detectQueryType = (query: string): 'domain' | 'ip' => {
     const trimmed = query.trim();
-    // Simple IPv4 check
     const ipv4Regex =
       /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
-    // Simple IPv6 check
     const ipv6Regex =
       /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(::1)|(::)|([0-9a-fA-F]{1,4}::[0-9a-fA-F]{1,4}))$/;
 
@@ -66,10 +53,6 @@ export default function HomeContent() {
     }
     return 'domain';
   };
-
-  /**
-   * Handle WHOIS/IP lookup form submission
-   */
   const handleLookup = useCallback(
     async (query: string, captchaToken?: string) => {
       const inferredType = detectQueryType(query);
@@ -106,7 +89,6 @@ export default function HomeContent() {
           setUsedApi(data.usedApi);
           setQueryTime(data.queryTime || null);
 
-          // Check if domain/IP was actually found (not just raw data with "No match")
           const rawData = data.data.raw || '';
           const parsed = data.data.parsed || {};
           const isNotFound =
@@ -115,7 +97,6 @@ export default function HomeContent() {
             rawData.toLowerCase().includes('no entries found') ||
             Object.keys(parsed).length === 0;
 
-          // Convert to WhoisResult format
           const whoisResult: WhoisResultType = {
             domain: data.domain || query,
             timestamp: new Date().toISOString(),
@@ -128,13 +109,11 @@ export default function HomeContent() {
                 data: isNotFound
                   ? undefined
                   : inferredType === 'ip'
-                    ? // For IP queries, pass the entire parsed RDAP data with rawData
-                    {
+                    ? {
                       ...(data.data.parsed as unknown as Record<string, unknown>),
                       rawData: data.data.raw,
                     }
-                    : // For domain queries, extract specific fields
-                    {
+                    : {
                       domainName:
                         (data.data.parsed?.domainName as string) || query,
                       registrar: data.data.parsed
@@ -161,13 +140,11 @@ export default function HomeContent() {
             data: isNotFound
               ? null
               : inferredType === 'ip'
-                ? // For IP queries, pass the entire parsed RDAP data with rawData
-                {
+                ? {
                   ...(data.data.parsed as unknown as Record<string, unknown>),
                   rawData: data.data.raw,
                 }
-                : // For domain queries, extract specific fields
-                {
+                : {
                   domainName:
                     (data.data.parsed?.domainName as string) || query,
                   registrar: data.data.parsed?.registrar as string,
@@ -203,10 +180,6 @@ export default function HomeContent() {
     },
     [detectQueryType]
   );
-
-  /**
-   * Clear current results
-   */
   const handleClear = useCallback(() => {
     setResult(null);
     setError(null);
@@ -216,22 +189,15 @@ export default function HomeContent() {
     setPendingQuery(null);
     recaptchaRef.current?.reset();
   }, []);
-
-  /**
-   * Handle captcha verification
-   */
   const handleCaptchaChange = useCallback(async (token: string | null) => {
     if (token && pendingQuery) {
       setShowCaptcha(false);
       setError(null);
-      // Retry the query with the captcha token
       await handleLookup(pendingQuery.query, token);
       setPendingQuery(null);
       recaptchaRef.current?.reset();
     }
   }, [pendingQuery, handleLookup]);
-
-  // Show loading state until mounted on client
   if (!mounted) {
     return (
       <div className="min-h-screen w-full bg-white flex items-center justify-center">
@@ -246,10 +212,8 @@ export default function HomeContent() {
   return (
     <BackgroundPaths>
       <div className="min-h-screen flex flex-col">
-        {/* Fixed height section for header and form - always stays at the same position */}
         <div className="h-[25vh] flex flex-col items-center justify-end flex-shrink-0 pb-6">
           <div className="w-full container mx-auto px-4 max-w-5xl">
-            {/* Header */}
             <header className="text-center mb-6 md:mb-8">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 flex items-center justify-center gap-3 md:gap-4">
                 <span className="text-[#34495E]">
@@ -257,8 +221,6 @@ export default function HomeContent() {
                 </span>
               </h1>
             </header>
-
-            {/* Search form */}
             <WhoisForm
               onSubmit={handleLookup}
               onClear={handleClear}
@@ -267,10 +229,8 @@ export default function HomeContent() {
           </div>
         </div>
 
-        {/* Results section - grows as needed */}
         <div className="flex-1 w-full container mx-auto px-4 max-w-5xl pt-6 pb-24">
           <div className="space-y-6 w-full">
-            {/* Error message */}
             {error && (
               <div className="animate-fade-in glass-card rounded-2xl p-5 border border-red-200 glow-error">
                 <div className="flex items-center gap-4">
@@ -283,8 +243,6 @@ export default function HomeContent() {
                 </div>
               </div>
             )}
-
-            {/* reCAPTCHA widget */}
             {showCaptcha && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
               <div className="animate-fade-in flex flex-col items-center gap-4 py-6">
                 <p className="text-[#34495E] text-sm">Devam etmek için robot olmadığınızı doğrulayın:</p>
@@ -297,8 +255,6 @@ export default function HomeContent() {
                 />
               </div>
             )}
-
-            {/* Loading state */}
             {loading && (
               <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
                 <div className="relative">
@@ -308,8 +264,6 @@ export default function HomeContent() {
                 <p className="text-[#34495E] mt-6 text-sm tracking-wide">Domain sorgulanıyor...</p>
               </div>
             )}
-
-            {/* Results */}
             {result && !loading && (
               <div className="animate-scale-in ">
                 <WhoisResult result={result} queryType={currentQueryType} />
@@ -318,8 +272,6 @@ export default function HomeContent() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
       <footer className="fixed bottom-0 left-0 right-0 py-6 bg-white/80 backdrop-blur-sm">
         <div className="text-center">
           <div className="text-gray-500 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1">

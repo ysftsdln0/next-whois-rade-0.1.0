@@ -8,16 +8,8 @@ interface WhoisResultProps {
   queryType?: 'domain' | 'ip';
 }
 
-/**
- * WHOIS result display component
- * Shows lookup results in multiple formats
- */
 export default function WhoisResult({ result, queryType = 'domain' }: WhoisResultProps) {
   const [showRawData, setShowRawData] = useState(false);
-
-  /**
-   * Format date string for display
-   */
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'N/A';
     try {
@@ -30,10 +22,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       return dateStr;
     }
   };
-
-  /**
-   * Check if WHOIS data is privacy protected
-   */
   const isPrivacyProtected = useMemo(() => {
     const whoisData = result?.data;
     if (!whoisData) return false;
@@ -73,10 +61,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
     return false;
   }, [result.data]);
-
-  /**
-   * Group WHOIS data into sections
-   */
   const dataGroups = useMemo(() => {
     const data = result.data;
     if (!data) return [];
@@ -162,10 +146,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       },
     ];
   }, [result.data, isPrivacyProtected]);
-
-  /**
-   * Parse vCard array to extract contact info
-   */
   const parseVCard = (vcardArray: unknown[]): { name: string; org: string; address: string; email: string; phone: string } => {
     const result = { name: '', org: '', address: '', email: '', phone: '' };
     if (!Array.isArray(vcardArray) || vcardArray.length < 2) return result;
@@ -187,14 +167,9 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
     return result;
   };
-
-  /**
-   * Convert RDAP JSON to WHOIS-like text format
-   */
   const rdapToText = (rdapData: Record<string, unknown>): string => {
     const lines: string[] = [];
 
-    // Network information
     const netName = String(rdapData.name || '');
     const handle = String(rdapData.handle || '');
     const startAddress = String(rdapData.startAddress || '');
@@ -203,11 +178,9 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     const type = String(rdapData.type || '');
     const parentHandle = String(rdapData.parentHandle || '');
 
-    // CIDR
     const cidr0 = rdapData.cidr0_cidrs as Array<{ v4prefix?: string; v6prefix?: string; length?: number }> || [];
     const cidr = cidr0.map(c => `${c.v4prefix || c.v6prefix}/${c.length}`).join(', ');
 
-    // Events
     const events = rdapData.events as Array<{ eventAction: string; eventDate: string }> || [];
     let regDate = '';
     let updateDate = '';
@@ -216,7 +189,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       if (e.eventAction === 'last changed') updateDate = e.eventDate;
     });
 
-    // Links
     const links = rdapData.links as Array<{ rel?: string; href?: string }> || [];
     const selfLink = links.find(l => l.rel === 'self');
 
@@ -228,7 +200,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     if (parentHandle) lines.push(`Parent:         ${parentHandle}`);
     if (ipVersion) lines.push(`IPVersion:      ${ipVersion}`);
 
-    // Parse entities
     const entities = rdapData.entities as Array<Record<string, unknown>> || [];
     entities.forEach(entity => {
       const roles = entity.roles as string[] || [];
@@ -244,7 +215,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         if (vcard.phone) lines.push(`Phone:          ${vcard.phone}`);
       }
 
-      // Check nested entities
       const nestedEntities = entity.entities as Array<Record<string, unknown>> || [];
       nestedEntities.forEach(nested => {
         const nestedRoles = nested.roles as string[] || [];
@@ -276,21 +246,14 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
     return lines.join('\n');
   };
-
-  /**
-   * Group IP WHOIS/RDAP data into sections - parses RDAP JSON directly
-   */
   const ipDataGroups = useMemo(() => {
     const data = result.data;
     if (!data) return [];
 
-    // Access the parsed data - check for both backend parsed and raw RDAP
     const parsed = data as unknown as Record<string, unknown>;
 
-    // Check if we have RDAP data (from backend's rdap field or direct RDAP response)
     const rdap = (parsed.rdap as Record<string, unknown>) || parsed;
 
-    // Network info from RDAP - try multiple possible locations
     const netHandle = String(rdap.handle || parsed.handle || rdap.netHandle || '');
     const netName = String(rdap.name || parsed.name || rdap.netName || '');
     const startAddress = String(rdap.startAddress || parsed.startAddress || '');
@@ -300,11 +263,9 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     const parentHandle = String(rdap.parentHandle || parsed.parentHandle || '');
     const port43 = String(rdap.port43 || parsed.port43 || '');
 
-    // Parse CIDR from cidr0_cidrs
     const cidr0 = (rdap.cidr0_cidrs || parsed.cidr0_cidrs) as Array<{ v4prefix?: string; v6prefix?: string; length?: number }> || [];
     const cidr = cidr0.map(c => `${c.v4prefix || c.v6prefix}/${c.length}`).join(', ');
 
-    // Parse events for dates
     const events = (rdap.events || parsed.events) as Array<{ eventAction: string; eventDate: string }> || [];
     let registrationDate = '';
     let lastChangedDate = '';
@@ -313,7 +274,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       if (event.eventAction === 'last changed') lastChangedDate = event.eventDate;
     });
 
-    // Parse entities for organization and OriginAS
     const entities = (rdap.entities || parsed.entities) as Array<Record<string, unknown>> || [];
     let organization = '';
     let orgHandle = '';
@@ -330,7 +290,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       }
     });
 
-    // Format date for display (simple date format like in the image)
     const formatRdapDate = (dateStr: string) => {
       if (!dateStr) return '';
       try {
@@ -340,13 +299,10 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       } catch { return dateStr; }
     };
 
-    // Build NetRange
     const netRange = startAddress && endAddress ? `${startAddress} - ${endAddress}` : '';
 
-    // Build Parent display - format: "GOGL (NET-8-0-0-0-0)"
     const parentDisplay = parentHandle ? `${netName} (${parentHandle})` : '';
 
-    // Get RDAP reference link
     const links = rdap.links as Array<{ rel?: string; href?: string }> || [];
     const selfLink = links.find(l => l.rel === 'self');
     const refUrl = selfLink?.href || '';
@@ -374,13 +330,10 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       },
     ];
   }, [result.data]);
-
   return (
     <div className="bg-white rounded-2xl border-2 border-[#34495E] overflow-hidden">
-      {/* Header with tabs */}
       <div className="border-b-2 border-[#34495E]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between p-5 gap-4">
-          {/* Result info */}
           <div className="flex items-center gap-4">
             <div className={`w-3 h-3 rounded-full ${result.data ? 'bg-emerald-500 shadow-glow-success' : 'bg-red-500 shadow-glow-error'}`} />
             <div>
@@ -396,9 +349,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-5 md:p-6">
-        {/* IP Query - Show parsed raw data directly */}
         {queryType === 'ip' && result.data?.rawData && (
           <div className="bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl p-4">
             <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
@@ -409,7 +360,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
                     : result.data.rawData;
                   return rdapToText(parsed as Record<string, unknown>);
                 } catch {
-                  // If parsing fails, show as is
                   return result.data.rawData;
                 }
               })()}
@@ -417,12 +367,10 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           </div>
         )}
 
-        {/* Domain Query - Formatted view */}
         {queryType !== 'ip' && result.data && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
             {dataGroups.map((group) => {
               const hasData = group.fields.some(f => f.value);
-              // Always show Tarihler if privacy is enabled, even if fields are empty
               const isPrivacyGroup = 'isPrivacyProtected' in group && Boolean(group.isPrivacyProtected);
               if (!hasData && !(group.title === 'Tarihler' && isPrivacyGroup)) return null;
 
@@ -488,7 +436,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           </div>
         )}
 
-        {/* Raw Data Button and Section - Only for domain queries */}
         {queryType !== 'ip' && result.data?.rawData && (
           <div className="mt-6">
             <button
@@ -515,7 +462,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           </div>
         )}
 
-        {/* No data message */}
         {!result.data && (
           <div className="text-center py-16">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#34495E]/10 flex items-center justify-center">
