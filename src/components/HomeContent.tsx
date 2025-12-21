@@ -127,53 +127,67 @@ export default function HomeContent() {
                 responseTime: parseInt(data.queryTime || '0', 10),
                 data: isNotFound
                   ? undefined
-                  : {
-                    domainName:
-                      (data.data.parsed?.domainName as string) || query,
-                    registrar: data.data.parsed
-                      ?.registrar as string,
-                    registrarUrl: data.data.parsed
-                      ?.registrarUrl as string,
-                    creationDate:
-                      data.data.dates?.created ||
-                      (data.data.parsed?.creationDate as string),
-                    expirationDate:
-                      data.data.dates?.expires ||
-                      (data.data.parsed?.expirationDate as string),
-                    updatedDate:
-                      data.data.dates?.updated ||
-                      (data.data.parsed?.updatedDate as string),
-                    nameServers: data.data.parsed
-                      ?.nameServers as string[],
-                    status: data.data.parsed?.status as string[],
-                    dnssec: data.data.parsed?.dnssec as string,
-                    rawData: data.data.raw,
-                  },
+                  : inferredType === 'ip'
+                    ? // For IP queries, pass the entire parsed RDAP data with rawData
+                    {
+                      ...(data.data.parsed as unknown as Record<string, unknown>),
+                      rawData: data.data.raw,
+                    }
+                    : // For domain queries, extract specific fields
+                    {
+                      domainName:
+                        (data.data.parsed?.domainName as string) || query,
+                      registrar: data.data.parsed
+                        ?.registrar as string,
+                      registrarUrl: data.data.parsed
+                        ?.registrarUrl as string,
+                      creationDate:
+                        data.data.dates?.created ||
+                        (data.data.parsed?.creationDate as string),
+                      expirationDate:
+                        data.data.dates?.expires ||
+                        (data.data.parsed?.expirationDate as string),
+                      updatedDate:
+                        data.data.dates?.updated ||
+                        (data.data.parsed?.updatedDate as string),
+                      nameServers: data.data.parsed
+                        ?.nameServers as string[],
+                      status: data.data.parsed?.status as string[],
+                      dnssec: data.data.parsed?.dnssec as string,
+                      rawData: data.data.raw,
+                    },
               },
             ],
             data: isNotFound
               ? null
-              : {
-                domainName:
-                  (data.data.parsed?.domainName as string) || query,
-                registrar: data.data.parsed?.registrar as string,
-                registrarUrl: data.data.parsed
-                  ?.registrarUrl as string,
-                creationDate:
-                  data.data.dates?.created ||
-                  (data.data.parsed?.creationDate as string),
-                expirationDate:
-                  data.data.dates?.expires ||
-                  (data.data.parsed?.expirationDate as string),
-                updatedDate:
-                  data.data.dates?.updated ||
-                  (data.data.parsed?.updatedDate as string),
-                nameServers: data.data.parsed
-                  ?.nameServers as string[],
-                status: data.data.parsed?.status as string[],
-                dnssec: data.data.parsed?.dnssec as string,
-                rawData: data.data.raw,
-              },
+              : inferredType === 'ip'
+                ? // For IP queries, pass the entire parsed RDAP data with rawData
+                {
+                  ...(data.data.parsed as unknown as Record<string, unknown>),
+                  rawData: data.data.raw,
+                }
+                : // For domain queries, extract specific fields
+                {
+                  domainName:
+                    (data.data.parsed?.domainName as string) || query,
+                  registrar: data.data.parsed?.registrar as string,
+                  registrarUrl: data.data.parsed
+                    ?.registrarUrl as string,
+                  creationDate:
+                    data.data.dates?.created ||
+                    (data.data.parsed?.creationDate as string),
+                  expirationDate:
+                    data.data.dates?.expires ||
+                    (data.data.parsed?.expirationDate as string),
+                  updatedDate:
+                    data.data.dates?.updated ||
+                    (data.data.parsed?.updatedDate as string),
+                  nameServers: data.data.parsed
+                    ?.nameServers as string[],
+                  status: data.data.parsed?.status as string[],
+                  dnssec: data.data.parsed?.dnssec as string,
+                  rawData: data.data.raw,
+                },
             errors: [],
           };
           setResult(whoisResult);

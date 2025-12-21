@@ -5,7 +5,7 @@
 
 // WHOIS data structure returned by providers
 export interface WhoisData {
-  domainName: string;
+  domainName?: string;
   registrar?: string;
   registrarUrl?: string;
   registrarIanaId?: string;
@@ -33,6 +33,8 @@ export interface WhoisData {
   dnssec?: string;
   status?: string[];
   rawData?: string;
+  // Allow additional properties for IP RDAP data
+  [key: string]: unknown;
 }
 
 // Provider response structure

@@ -189,6 +189,95 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   };
 
   /**
+   * Convert RDAP JSON to WHOIS-like text format
+   */
+  const rdapToText = (rdapData: Record<string, unknown>): string => {
+    const lines: string[] = [];
+
+    // Network information
+    const netName = String(rdapData.name || '');
+    const handle = String(rdapData.handle || '');
+    const startAddress = String(rdapData.startAddress || '');
+    const endAddress = String(rdapData.endAddress || '');
+    const ipVersion = String(rdapData.ipVersion || '');
+    const type = String(rdapData.type || '');
+    const parentHandle = String(rdapData.parentHandle || '');
+
+    // CIDR
+    const cidr0 = rdapData.cidr0_cidrs as Array<{ v4prefix?: string; v6prefix?: string; length?: number }> || [];
+    const cidr = cidr0.map(c => `${c.v4prefix || c.v6prefix}/${c.length}`).join(', ');
+
+    // Events
+    const events = rdapData.events as Array<{ eventAction: string; eventDate: string }> || [];
+    let regDate = '';
+    let updateDate = '';
+    events.forEach(e => {
+      if (e.eventAction === 'registration') regDate = e.eventDate;
+      if (e.eventAction === 'last changed') updateDate = e.eventDate;
+    });
+
+    // Links
+    const links = rdapData.links as Array<{ rel?: string; href?: string }> || [];
+    const selfLink = links.find(l => l.rel === 'self');
+
+    if (netName) lines.push(`NetName:        ${netName}`);
+    if (handle) lines.push(`NetHandle:      ${handle}`);
+    if (startAddress && endAddress) lines.push(`NetRange:       ${startAddress} - ${endAddress}`);
+    if (cidr) lines.push(`CIDR:           ${cidr}`);
+    if (type) lines.push(`NetType:        ${type}`);
+    if (parentHandle) lines.push(`Parent:         ${parentHandle}`);
+    if (ipVersion) lines.push(`IPVersion:      ${ipVersion}`);
+
+    // Parse entities
+    const entities = rdapData.entities as Array<Record<string, unknown>> || [];
+    entities.forEach(entity => {
+      const roles = entity.roles as string[] || [];
+      const vcard = parseVCard(entity.vcardArray as unknown[] || []);
+      const entityHandle = String(entity.handle || '');
+
+      if (roles.includes('registrant')) {
+        lines.push('');
+        lines.push('Organization:   ' + (vcard.org || vcard.name));
+        if (entityHandle) lines.push(`OrgHandle:      ${entityHandle}`);
+        if (vcard.address) lines.push(`Address:        ${vcard.address}`);
+        if (vcard.email) lines.push(`Email:          ${vcard.email}`);
+        if (vcard.phone) lines.push(`Phone:          ${vcard.phone}`);
+      }
+
+      // Check nested entities
+      const nestedEntities = entity.entities as Array<Record<string, unknown>> || [];
+      nestedEntities.forEach(nested => {
+        const nestedRoles = nested.roles as string[] || [];
+        const nestedVcard = parseVCard(nested.vcardArray as unknown[] || []);
+        const nestedHandle = String(nested.handle || '');
+
+        if (nestedRoles.includes('abuse')) {
+          lines.push('');
+          lines.push('Abuse Contact:  ' + (nestedVcard.org || nestedVcard.name));
+          if (nestedHandle) lines.push(`AbuseHandle:    ${nestedHandle}`);
+          if (nestedVcard.email) lines.push(`AbuseEmail:     ${nestedVcard.email}`);
+          if (nestedVcard.phone) lines.push(`AbusePhone:     ${nestedVcard.phone}`);
+        }
+
+        if (nestedRoles.includes('technical')) {
+          lines.push('');
+          lines.push('Tech Contact:   ' + (nestedVcard.org || nestedVcard.name));
+          if (nestedHandle) lines.push(`TechHandle:     ${nestedHandle}`);
+          if (nestedVcard.email) lines.push(`TechEmail:      ${nestedVcard.email}`);
+          if (nestedVcard.phone) lines.push(`TechPhone:      ${nestedVcard.phone}`);
+        }
+      });
+    });
+
+    lines.push('');
+    if (regDate) lines.push(`RegDate:        ${new Date(regDate).toISOString().split('T')[0]}`);
+    if (updateDate) lines.push(`Updated:        ${new Date(updateDate).toISOString().split('T')[0]}`);
+    if (selfLink?.href) lines.push(`Ref:            ${selfLink.href}`);
+
+    return lines.join('\n');
+  };
+
+  /**
    * Group IP WHOIS/RDAP data into sections - parses RDAP JSON directly
    */
   const ipDataGroups = useMemo(() => {
@@ -201,22 +290,22 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     // Check if we have RDAP data (from backend's rdap field or direct RDAP response)
     const rdap = (parsed.rdap as Record<string, unknown>) || parsed;
 
-    // Network info from RDAP
-    const netHandle = String(rdap.handle || parsed.handle || '');
-    const netName = String(rdap.name || parsed.name || '');
-    const startAddress = String(rdap.startAddress || '');
-    const endAddress = String(rdap.endAddress || '');
-    const ipVersion = String(rdap.ipVersion || '');
-    const netType = String(rdap.type || '');
-    const parentHandle = String(rdap.parentHandle || '');
-    const port43 = String(rdap.port43 || '');
+    // Network info from RDAP - try multiple possible locations
+    const netHandle = String(rdap.handle || parsed.handle || rdap.netHandle || '');
+    const netName = String(rdap.name || parsed.name || rdap.netName || '');
+    const startAddress = String(rdap.startAddress || parsed.startAddress || '');
+    const endAddress = String(rdap.endAddress || parsed.endAddress || '');
+    const ipVersion = String(rdap.ipVersion || parsed.ipVersion || '');
+    const netType = String(rdap.type || parsed.type || rdap.netType || '');
+    const parentHandle = String(rdap.parentHandle || parsed.parentHandle || '');
+    const port43 = String(rdap.port43 || parsed.port43 || '');
 
     // Parse CIDR from cidr0_cidrs
-    const cidr0 = rdap.cidr0_cidrs as Array<{ v4prefix?: string; v6prefix?: string; length?: number }> || [];
+    const cidr0 = (rdap.cidr0_cidrs || parsed.cidr0_cidrs) as Array<{ v4prefix?: string; v6prefix?: string; length?: number }> || [];
     const cidr = cidr0.map(c => `${c.v4prefix || c.v6prefix}/${c.length}`).join(', ');
 
     // Parse events for dates
-    const events = rdap.events as Array<{ eventAction: string; eventDate: string }> || [];
+    const events = (rdap.events || parsed.events) as Array<{ eventAction: string; eventDate: string }> || [];
     let registrationDate = '';
     let lastChangedDate = '';
     events.forEach(event => {
@@ -225,7 +314,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     });
 
     // Parse entities for organization and OriginAS
-    const entities = rdap.entities as Array<Record<string, unknown>> || [];
+    const entities = (rdap.entities || parsed.entities) as Array<Record<string, unknown>> || [];
     let organization = '';
     let orgHandle = '';
     let originAS = '';
@@ -254,8 +343,8 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     // Build NetRange
     const netRange = startAddress && endAddress ? `${startAddress} - ${endAddress}` : '';
 
-    // Build Parent display
-    const parentDisplay = parentHandle ? `${netName.split('-')[0] || 'NET'} (${parentHandle})` : '';
+    // Build Parent display - format: "GOGL (NET-8-0-0-0-0)"
+    const parentDisplay = parentHandle ? `${netName} (${parentHandle})` : '';
 
     // Get RDAP reference link
     const links = rdap.links as Array<{ rel?: string; href?: string }> || [];
@@ -277,11 +366,10 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           { label: 'NetHandle', value: netHandle },
           { label: 'Parent', value: parentDisplay },
           { label: 'NetType', value: netType },
-          { label: 'OriginAS', value: originAS },
+          { label: 'OriginAS', value: originAS || '' },
           { label: 'Organization', value: organization ? `${organization} (${orgHandle})` : '' },
           { label: 'RegDate', value: formatRdapDate(registrationDate) },
           { label: 'Updated', value: formatRdapDate(lastChangedDate) },
-          { label: 'Ref', value: refUrl, isLink: true },
         ],
       },
     ];
@@ -310,51 +398,22 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
       {/* Content */}
       <div className="p-5 md:p-6">
-        {/* IP Query - Show formatted RDAP data */}
-        {queryType === 'ip' && result.data && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
-            {ipDataGroups.map((group) => {
-              const hasData = group.fields.some(f => f.value);
-              if (!hasData) return null;
-
-              return (
-                <div
-                  key={group.title}
-                  className="bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-4 text-[#34495E]">
-                    {group.icon}
-                    <h3 className="text-xs uppercase tracking-wider font-medium">{group.title}</h3>
-                  </div>
-                  <dl className="space-y-2">
-                    {group.fields.map((field, i) => {
-                      if (!field.value || field.value === 'N/A') return null;
-                      return (
-                        <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
-                          <dt className="text-xs text-[#34495E]/60 sm:w-32 flex-shrink-0">
-                            {field.label}
-                          </dt>
-                          <dd className="text-sm text-[#34495E] break-all font-mono">
-                            {'isLink' in field && field.isLink ? (
-                              <a
-                                href={field.value}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-emerald-600 hover:text-emerald-700 animated-underline"
-                              >
-                                {field.value}
-                              </a>
-                            ) : (
-                              field.value
-                            )}
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </dl>
-                </div>
-              );
-            })}
+        {/* IP Query - Show parsed raw data directly */}
+        {queryType === 'ip' && result.data?.rawData && (
+          <div className="bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl p-4">
+            <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
+              {(() => {
+                try {
+                  const parsed = typeof result.data.rawData === 'string'
+                    ? JSON.parse(result.data.rawData)
+                    : result.data.rawData;
+                  return rdapToText(parsed as Record<string, unknown>);
+                } catch {
+                  // If parsing fails, show as is
+                  return result.data.rawData;
+                }
+              })()}
+            </pre>
           </div>
         )}
 
@@ -429,8 +488,8 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           </div>
         )}
 
-        {/* Raw Data Button and Section */}
-        {result.data?.rawData && (
+        {/* Raw Data Button and Section - Only for domain queries */}
+        {queryType !== 'ip' && result.data?.rawData && (
           <div className="mt-6">
             <button
               onClick={() => setShowRawData(!showRawData)}

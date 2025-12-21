@@ -211,11 +211,11 @@ function whoisLookup(domain: string, timeout: number, server?: string): Promise<
 // native whois sorgulama ana fonksiyonu
 export async function queryNativeWhois(domain: string, timeout: number = 10000): Promise<ProviderResponse> {
   const startTime = Date.now();
-  
+
   try {
     const tld = extractTld(domain);
     const whoisServer = getWhoisServer(tld);
-    
+
     log.debug('native whois sorgusu', { domain, tld, whoisServer });
 
     const rawData = await whoisLookup(domain, timeout, whoisServer || undefined);
@@ -226,15 +226,15 @@ export async function queryNativeWhois(domain: string, timeout: number = 10000):
     }
 
     const lowerData = rawData.toLowerCase();
-    if (lowerData.includes('no match') || 
-        lowerData.includes('not found') || 
-        lowerData.includes('no entries found') ||
-        lowerData.includes('no data found')) {
+    if (lowerData.includes('no match') ||
+      lowerData.includes('not found') ||
+      lowerData.includes('no entries found') ||
+      lowerData.includes('no data found')) {
       return { provider: 'native', success: false, error: 'domain whois veritabanında bulunamadı', responseTime };
     }
 
     const data = parseWhoisText(rawData, domain);
-    
+
     if (!data.registrar && !data.creationDate && !data.nameServers) {
       if (rawData.length > 100) {
         data.rawData = rawData;
@@ -248,7 +248,7 @@ export async function queryNativeWhois(domain: string, timeout: number = 10000):
   } catch (error) {
     const responseTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'bilinmeyen hata';
-    
+
     log.error('native whois sorgusu başarısız', { domain, error: errorMessage, responseTime });
     return { provider: 'native', success: false, error: errorMessage, responseTime };
   }
