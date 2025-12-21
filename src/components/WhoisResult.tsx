@@ -57,7 +57,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       whoisData.registrantOrganization,
       whoisData.registrantEmail,
     ].filter(Boolean).map(f => f!.toLowerCase());
-    
+
     for (const field of fieldsToCheck) {
       if (privacyKeywords.some(keyword => field.includes(keyword))) {
         return true;
@@ -70,7 +70,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         return true;
       }
     }
-    
+
     return false;
   }, [result.data]);
 
@@ -211,10 +211,6 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     const parentHandle = String(rdap.parentHandle || '');
     const port43 = String(rdap.port43 || '');
 
-    // Parse status array
-    const statusArr = rdap.status as string[] || [];
-    const status = Array.isArray(statusArr) ? statusArr.join(', ') : '';
-
     // Parse CIDR from cidr0_cidrs
     const cidr0 = rdap.cidr0_cidrs as Array<{ v4prefix?: string; v6prefix?: string; length?: number }> || [];
     const cidr = cidr0.map(c => `${c.v4prefix || c.v6prefix}/${c.length}`).join(', ');
@@ -228,160 +224,66 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       if (event.eventAction === 'last changed') lastChangedDate = event.eventDate;
     });
 
-    // Parse entities for contacts
+    // Parse entities for organization and OriginAS
     const entities = rdap.entities as Array<Record<string, unknown>> || [];
-    let registrant = { name: '', org: '', address: '', email: '', phone: '', handle: '' };
-    let abuseContact = { name: '', org: '', address: '', email: '', phone: '', handle: '' };
-    let techContact = { name: '', org: '', address: '', email: '', phone: '', handle: '' };
-    let adminContact = { name: '', org: '', address: '', email: '', phone: '', handle: '' };
-    let remarks: string[] = [];
+    let organization = '';
+    let orgHandle = '';
+    let originAS = '';
 
     entities.forEach(entity => {
       const roles = entity.roles as string[] || [];
       const vcard = parseVCard(entity.vcardArray as unknown[] || []);
       const entityHandle = String(entity.handle || '');
 
-      // Parse remarks
-      const entityRemarks = entity.remarks as Array<{ description: string[] }> || [];
-      entityRemarks.forEach(r => {
-        if (r.description) remarks.push(...r.description);
-      });
-
       if (roles.includes('registrant')) {
-        registrant = { ...vcard, handle: entityHandle };
+        organization = vcard.org || vcard.name;
+        orgHandle = entityHandle;
       }
-
-      // Parse nested entities for abuse, tech, admin
-      const nestedEntities = entity.entities as Array<Record<string, unknown>> || [];
-      nestedEntities.forEach(nested => {
-        const nestedRoles = nested.roles as string[] || [];
-        const nestedVcard = parseVCard(nested.vcardArray as unknown[] || []);
-        const nestedHandle = String(nested.handle || '');
-
-        if (nestedRoles.includes('abuse')) {
-          abuseContact = { ...nestedVcard, handle: nestedHandle };
-        }
-        if (nestedRoles.includes('technical')) {
-          techContact = { ...nestedVcard, handle: nestedHandle };
-        }
-        if (nestedRoles.includes('administrative')) {
-          adminContact = { ...nestedVcard, handle: nestedHandle };
-        }
-      });
     });
 
-    // Format date for display
+    // Format date for display (simple date format like in the image)
     const formatRdapDate = (dateStr: string) => {
       if (!dateStr) return '';
       try {
-        return new Date(dateStr).toLocaleString('tr-TR', {
-          year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
+        return new Date(dateStr).toLocaleDateString('tr-TR', {
+          year: 'numeric', month: '2-digit', day: '2-digit'
         });
       } catch { return dateStr; }
     };
 
+    // Build NetRange
+    const netRange = startAddress && endAddress ? `${startAddress} - ${endAddress}` : '';
+
+    // Build Parent display
+    const parentDisplay = parentHandle ? `${netName.split('-')[0] || 'NET'} (${parentHandle})` : '';
+
+    // Get RDAP reference link
+    const links = rdap.links as Array<{ rel?: string; href?: string }> || [];
+    const selfLink = links.find(l => l.rel === 'self');
+    const refUrl = selfLink?.href || '';
+
     return [
       {
-        title: 'Ağ Bilgisi',
+        title: 'IP WHOIS Bilgisi',
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
           </svg>
         ),
         fields: [
-          { label: 'Ağ Adı', value: netName },
-          { label: 'Handle', value: netHandle },
-          { label: 'IP Başlangıç', value: startAddress },
-          { label: 'IP Bitiş', value: endAddress },
-          { label: 'IP Versiyon', value: ipVersion },
-          { label: 'Ağ Türü', value: netType },
+          { label: 'NetRange', value: netRange },
           { label: 'CIDR', value: cidr },
-          { label: 'Üst Ağ', value: parentHandle },
-          { label: 'Durum', value: status },
-          { label: 'WHOIS Server', value: port43 },
+          { label: 'NetName', value: netName },
+          { label: 'NetHandle', value: netHandle },
+          { label: 'Parent', value: parentDisplay },
+          { label: 'NetType', value: netType },
+          { label: 'OriginAS', value: originAS },
+          { label: 'Organization', value: organization ? `${organization} (${orgHandle})` : '' },
+          { label: 'RegDate', value: formatRdapDate(registrationDate) },
+          { label: 'Updated', value: formatRdapDate(lastChangedDate) },
+          { label: 'Ref', value: refUrl, isLink: true },
         ],
       },
-      {
-        title: 'Kuruluş (Registrant)',
-        icon: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-        ),
-        fields: [
-          { label: 'Kuruluş Adı', value: registrant.name || registrant.org },
-          { label: 'Handle', value: registrant.handle },
-          { label: 'Adres', value: registrant.address },
-          { label: 'E-posta', value: registrant.email },
-          { label: 'Telefon', value: registrant.phone },
-        ],
-      },
-      {
-        title: 'Suistimal İletişim (Abuse)',
-        icon: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        ),
-        fields: [
-          { label: 'Ad', value: abuseContact.name || abuseContact.org },
-          { label: 'Handle', value: abuseContact.handle },
-          { label: 'E-posta', value: abuseContact.email },
-          { label: 'Telefon', value: abuseContact.phone },
-          { label: 'Adres', value: abuseContact.address },
-        ],
-      },
-      {
-        title: 'Teknik İletişim',
-        icon: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        ),
-        fields: [
-          { label: 'Ad', value: techContact.name || techContact.org },
-          { label: 'Handle', value: techContact.handle },
-          { label: 'E-posta', value: techContact.email },
-          { label: 'Telefon', value: techContact.phone },
-        ],
-      },
-      {
-        title: 'Yönetici İletişim',
-        icon: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        ),
-        fields: [
-          { label: 'Ad', value: adminContact.name || adminContact.org },
-          { label: 'Handle', value: adminContact.handle },
-          { label: 'E-posta', value: adminContact.email },
-          { label: 'Telefon', value: adminContact.phone },
-        ],
-      },
-      {
-        title: 'Tarihler',
-        icon: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        ),
-        fields: [
-          { label: 'Kayıt Tarihi', value: formatRdapDate(registrationDate) },
-          { label: 'Son Güncelleme', value: formatRdapDate(lastChangedDate) },
-        ],
-      },
-      ...(remarks.length > 0 ? [{
-        title: 'Notlar',
-        icon: (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-          </svg>
-        ),
-        fields: remarks.filter(r => r.trim()).slice(0, 5).map((r, i) => ({ label: `Not ${i + 1}`, value: r })),
-      }] : []),
     ];
   }, [result.data]);
 
@@ -408,25 +310,51 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
       {/* Content */}
       <div className="p-5 md:p-6">
-        {/* IP Query - Show raw RDAP JSON directly */}
+        {/* IP Query - Show formatted RDAP data */}
         {queryType === 'ip' && result.data && (
-          <div className="bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl p-4 overflow-hidden">
-            <div className="flex items-center gap-2 mb-4 text-[#34495E]">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              </svg>
-              <h3 className="text-xs uppercase tracking-wider font-medium">RDAP JSON Yanıtı</h3>
-            </div>
-            <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto max-h-[600px] overflow-y-auto">
-              {(() => {
-                const parsed = result.data as unknown as Record<string, unknown>;
-                // Get the RDAP data - either from 'rdap' field or the parsed data itself
-                const rdapData = (parsed.rdap as Record<string, unknown>) || parsed;
-                // Remove 'raw' field if it exists (it's usually the raw text version)
-                const { raw, rawData, ...cleanData } = rdapData as Record<string, unknown>;
-                return JSON.stringify(cleanData, null, 2);
-              })()}
-            </pre>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
+            {ipDataGroups.map((group) => {
+              const hasData = group.fields.some(f => f.value);
+              if (!hasData) return null;
+
+              return (
+                <div
+                  key={group.title}
+                  className="bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-4 text-[#34495E]">
+                    {group.icon}
+                    <h3 className="text-xs uppercase tracking-wider font-medium">{group.title}</h3>
+                  </div>
+                  <dl className="space-y-2">
+                    {group.fields.map((field, i) => {
+                      if (!field.value || field.value === 'N/A') return null;
+                      return (
+                        <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
+                          <dt className="text-xs text-[#34495E]/60 sm:w-32 flex-shrink-0">
+                            {field.label}
+                          </dt>
+                          <dd className="text-sm text-[#34495E] break-all font-mono">
+                            {'isLink' in field && field.isLink ? (
+                              <a
+                                href={field.value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-emerald-600 hover:text-emerald-700 animated-underline"
+                              >
+                                {field.value}
+                              </a>
+                            ) : (
+                              field.value
+                            )}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+              );
+            })}
           </div>
         )}
 
