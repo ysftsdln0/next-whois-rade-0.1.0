@@ -33,9 +33,9 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
       {/* Input with button */}
       <div className="relative">
         <div className="relative flex items-center">
-          <div className="absolute left-4 text-[#34495E]">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          <div className="absolute left-3 text-[#34495E]">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9 3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
             </svg>
           </div>
           <input
@@ -44,10 +44,10 @@ export default function WhoisForm({ onSubmit, onClear, loading }: WhoisFormProps
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ornek.com.tr / 8.8.8.8"
-            className="w-full pl-12 pr-32 py-4 bg-white border-2 border-[#34495E] rounded-xl 
+            className="w-full pl-10 pr-28 py-3 bg-white border-2 border-[#34495E] rounded-xl 
                        text-[#34495E] placeholder-[#34495E]/60
                        focus:outline-none focus:border-[#34495E]
-                       transition-all duration-200 font-mono"
+                       transition-all duration-200 font-mono text-sm"
             disabled={loading}
             autoComplete="off"
             spellCheck={false}
