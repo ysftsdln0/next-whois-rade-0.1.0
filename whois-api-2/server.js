@@ -4,6 +4,7 @@
  */
 
 const http = require('http');
+const https = require('https');
 const { exec } = require('child_process');
 
 const PORT = process.env.PORT || 4002;
@@ -30,6 +31,125 @@ function whoisLookup(domain, retries = 2) {
     };
     attempt(retries);
   });
+}
+
+/**
+ * Query RDAP API for IP addresses
+ */
+function rdapLookup(ip) {
+  return new Promise((resolve, reject) => {
+    const url = `https://rdap.arin.net/registry/ip/${ip}`;
+
+    https.get(url, { timeout: 30000 }, (response) => {
+      let data = '';
+
+      response.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      response.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve(json);
+        } catch (e) {
+          reject(new Error('Failed to parse RDAP response'));
+        }
+      });
+    }).on('error', (err) => {
+      reject(new Error(`RDAP lookup failed: ${err.message}`));
+    });
+  });
+}
+
+/**
+ * Parse RDAP response into our format
+ */
+function parseRdapResponse(rdap) {
+  const result = {
+    raw: JSON.stringify(rdap, null, 2),
+    parsed: {},
+    network: {},
+    organization: {},
+    abuse: {},
+    tech: {},
+    admin: {},
+    dates: {},
+    rdap: rdap
+  };
+
+  result.network = {
+    handle: rdap.handle || '',
+    name: rdap.name || '',
+    startAddress: rdap.startAddress || '',
+    endAddress: rdap.endAddress || '',
+    ipVersion: rdap.ipVersion || '',
+    type: rdap.type || '',
+    parentHandle: rdap.parentHandle || '',
+    status: rdap.status || [],
+    cidr: rdap.cidr0_cidrs ? rdap.cidr0_cidrs.map(c => `${c.v4prefix}/${c.length}`).join(', ') : ''
+  };
+
+  if (rdap.events) {
+    rdap.events.forEach(event => {
+      if (event.eventAction === 'registration') {
+        result.dates.registered = event.eventDate;
+      } else if (event.eventAction === 'last changed') {
+        result.dates.updated = event.eventDate;
+      }
+    });
+  }
+
+  if (rdap.entities) {
+    rdap.entities.forEach(entity => {
+      const roles = entity.roles || [];
+      const vcard = entity.vcardArray?.[1] || [];
+
+      let name = '', org = '', address = '', email = '', phone = '';
+      vcard.forEach(field => {
+        if (field[0] === 'fn') name = field[3];
+        if (field[0] === 'org') org = field[3];
+        if (field[0] === 'email') email = field[3];
+        if (field[0] === 'tel') phone = field[3];
+        if (field[0] === 'adr' && field[1]?.label) address = field[1].label;
+      });
+
+      const entityInfo = { handle: entity.handle || '', name, organization: org, address, email, phone };
+
+      if (roles.includes('registrant')) {
+        result.organization = { ...result.organization, ...entityInfo };
+      }
+
+      if (entity.entities) {
+        entity.entities.forEach(subEntity => {
+          const subRoles = subEntity.roles || [];
+          const subVcard = subEntity.vcardArray?.[1] || [];
+
+          let subName = '', subOrg = '', subAddress = '', subEmail = '', subPhone = '';
+          subVcard.forEach(field => {
+            if (field[0] === 'fn') subName = field[3];
+            if (field[0] === 'org') subOrg = field[3];
+            if (field[0] === 'email') subEmail = field[3];
+            if (field[0] === 'tel') subPhone = field[3];
+            if (field[0] === 'adr' && field[1]?.label) subAddress = field[1].label;
+          });
+
+          const subInfo = { handle: subEntity.handle || '', name: subName, organization: subOrg, address: subAddress, email: subEmail, phone: subPhone };
+
+          if (subRoles.includes('abuse')) result.abuse = subInfo;
+          if (subRoles.includes('technical')) result.tech = subInfo;
+          if (subRoles.includes('administrative')) result.admin = subInfo;
+        });
+      }
+    });
+  }
+
+  result.parsed = {
+    ...result.network,
+    orgName: result.organization.name || result.organization.organization,
+    orgAddress: result.organization.address
+  };
+
+  return result;
 }
 
 /**
@@ -104,47 +224,135 @@ function parseWhoisResponse(raw) {
 }
 
 /**
- * Parse raw WHOIS response for IP addresses
+ * Parse raw WHOIS response for IP addresses (enhanced)
  */
 function parseIpWhoisResponse(raw) {
   const result = {
     raw: raw,
-    parsed: {}
+    parsed: {},
+    network: {},
+    organization: {},
+    abuse: {},
+    tech: {},
+    dates: {}
   };
 
-  const patterns = {
+  // Network information
+  const networkPatterns = {
     netName: /NetName:\s*(.+)/i,
+    netHandle: /NetHandle:\s*(.+)/i,
     netRange: /NetRange:\s*(.+)/i,
     cidr: /CIDR:\s*(.+)/i,
-    orgName: /OrgName:\s*(.+)/i,
-    orgId: /OrgId:\s*(.+)/i,
-    address: /Address:\s*(.+)/i,
-    city: /City:\s*(.+)/i,
-    country: /Country:\s*(.+)/i,
-    regDate: /RegDate:\s*(.+)/i,
-    updated: /Updated:\s*(.+)/i,
-    comment: /Comment:\s*(.+)/gi,
-    abuseEmail: /OrgAbuseEmail:\s*(.+)/i,
-    techEmail: /OrgTechEmail:\s*(.+)/i,
+    netType: /NetType:\s*(.+)/i,
+    originAS: /OriginAS:\s*(.+)/i,
+    parent: /Parent:\s*(.+)/i,
+    ref: /Ref:\s*(.+)/i,
   };
 
-  for (const [key, pattern] of Object.entries(patterns)) {
-    if (key === 'comment') {
+  // Organization information
+  const orgPatterns = {
+    orgName: /OrgName:\s*(.+)/i,
+    orgId: /OrgId:\s*(.+)/i,
+    address: /Address:\s*(.+)/gi,
+    city: /City:\s*(.+)/i,
+    stateProv: /StateProv:\s*(.+)/i,
+    postalCode: /PostalCode:\s*(.+)/i,
+    country: /Country:\s*(.+)/i,
+  };
+
+  // Abuse contact
+  const abusePatterns = {
+    abuseHandle: /OrgAbuseHandle:\s*(.+)/i,
+    abuseName: /OrgAbuseName:\s*(.+)/i,
+    abuseEmail: /OrgAbuseEmail:\s*(.+)/i,
+    abusePhone: /OrgAbusePhone:\s*(.+)/i,
+    abuseRef: /OrgAbuseRef:\s*(.+)/i,
+  };
+
+  // Tech contact
+  const techPatterns = {
+    techHandle: /OrgTechHandle:\s*(.+)/i,
+    techName: /OrgTechName:\s*(.+)/i,
+    techEmail: /OrgTechEmail:\s*(.+)/i,
+    techPhone: /OrgTechPhone:\s*(.+)/i,
+    techRef: /OrgTechRef:\s*(.+)/i,
+  };
+
+  // Date patterns
+  const datePatterns = {
+    regDate: /RegDate:\s*(.+)/i,
+    updated: /Updated:\s*(.+)/i,
+  };
+
+  // Parse network info
+  for (const [key, pattern] of Object.entries(networkPatterns)) {
+    const match = raw.match(pattern);
+    if (match) {
+      result.network[key] = match[1].trim();
+    }
+  }
+
+  // Parse organization info (handle multiple addresses)
+  for (const [key, pattern] of Object.entries(orgPatterns)) {
+    if (key === 'address') {
       const matches = [];
       let match;
-      while ((match = pattern.exec(raw)) !== null) {
+      const regex = new RegExp(pattern.source, 'gi');
+      while ((match = regex.exec(raw)) !== null) {
         matches.push(match[1].trim());
       }
       if (matches.length > 0) {
-        result.parsed[key] = matches;
+        result.organization[key] = matches.join(', ');
       }
     } else {
       const match = raw.match(pattern);
       if (match) {
-        result.parsed[key] = match[1].trim();
+        result.organization[key] = match[1].trim();
       }
     }
   }
+
+  // Parse abuse contact
+  for (const [key, pattern] of Object.entries(abusePatterns)) {
+    const match = raw.match(pattern);
+    if (match) {
+      result.abuse[key] = match[1].trim();
+    }
+  }
+
+  // Parse tech contact
+  for (const [key, pattern] of Object.entries(techPatterns)) {
+    const match = raw.match(pattern);
+    if (match) {
+      result.tech[key] = match[1].trim();
+    }
+  }
+
+  // Parse dates
+  for (const [key, pattern] of Object.entries(datePatterns)) {
+    const match = raw.match(pattern);
+    if (match) {
+      result.dates[key] = match[1].trim();
+    }
+  }
+
+  // Extract comments
+  const commentPattern = /Comment:\s*(.+)/gi;
+  const comments = [];
+  let commentMatch;
+  while ((commentMatch = commentPattern.exec(raw)) !== null) {
+    comments.push(commentMatch[1].trim());
+  }
+  if (comments.length > 0) {
+    result.parsed.comments = comments;
+  }
+
+  // Copy key fields to parsed for backward compatibility
+  result.parsed = {
+    ...result.parsed,
+    ...result.network,
+    ...result.organization,
+  };
 
   return result;
 }
@@ -197,13 +405,17 @@ async function handleRequest(req, res) {
     try {
       console.log(`[${API_NAME}] Looking up ${queryType}: ${domain}`);
       const startTime = Date.now();
-      const rawWhois = await whoisLookup(domain);
-      const duration = Date.now() - startTime;
 
-      // Use different parsing based on query type
-      const parsed = queryType === 'ip'
-        ? parseIpWhoisResponse(rawWhois)
-        : parseWhoisResponse(rawWhois);
+      let parsed;
+      if (queryType === 'ip') {
+        const rdapData = await rdapLookup(domain);
+        parsed = parseRdapResponse(rdapData);
+      } else {
+        const rawWhois = await whoisLookup(domain);
+        parsed = parseWhoisResponse(rawWhois);
+      }
+
+      const duration = Date.now() - startTime;
 
       res.writeHead(200);
       res.end(JSON.stringify({
