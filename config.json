@@ -1,0 +1,38 @@
+{
+  "whois": {
+    "providers": {
+      "native": {
+        "enabled": true,
+        "priority": 1,
+        "description": "Native WHOIS protocol query"
+      },
+      "whoisxml": {
+        "enabled": false,
+        "priority": 2,
+        "apiKey": "",
+        "description": "WhoisXML API (requires API key)"
+      },
+      "jsonwhois": {
+        "enabled": false,
+        "priority": 3,
+        "apiKey": "",
+        "description": "JSON WHOIS API (requires API key)"
+      }
+    },
+    "timeout": 10000,
+    "retries": 2
+  },
+  "rateLimit": {
+    "enabled": true,
+    "windowMs": 60000,
+    "maxRequests": 30
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  },
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
+  }
+}

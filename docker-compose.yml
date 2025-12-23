@@ -1,0 +1,66 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_RECAPTCHA_SITE_KEY:{NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+        - NEXT_PUBLIC_BASE_URL:{NEXT_PUBLIC_BASE_URL}
+        - NEXT_PUBLIC_RECAPTCHA_SECRET_KEY:{NEXT_PUBLIC_RECAPTCHA_SECRET_KEY}
+    container_name: whois-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - WHOIS_API_ENDPOINTS=http://whois-api-1:4001,http://whois-api-2:4002,http://whois-api-3:4003
+      - RECAPTCHA_SECRET_KEY:{RECAPTCHA_SECRET_KEY}
+    depends_on:
+      - whois-api-1
+      - whois-api-2
+      - whois-api-3
+    networks:
+      - whois-network
+    restart: unless-stopped
+
+  whois-api-1:
+    build:
+      context: ./whois-api-1
+      dockerfile: Dockerfile
+    container_name: whois-api-1
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+    networks:
+      - whois-network
+    restart: unless-stopped
+
+  whois-api-2:
+    build:
+      context: ./whois-api-2
+      dockerfile: Dockerfile
+    container_name: whois-api-2
+    ports:
+      - "4002:4002"
+    environment:
+      - PORT=4002
+    networks:
+      - whois-network
+    restart: unless-stopped
+
+  whois-api-3:
+    build:
+      context: ./whois-api-3
+      dockerfile: Dockerfile
+    container_name: whois-api-3
+    ports:
+      - "4003:4003"
+    environment:
+      - PORT=4003
+    networks:
+      - whois-network
+    restart: unless-stopped
+
+networks:
+  whois-network:
+    driver: bridge

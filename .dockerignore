@@ -1,6 +1,47 @@
-README.md
-LICENSE
-.github
+# Dependencies
+node_modules/
 
-.next
-node_modules
+# Build output
+.next/
+out/
+build/
+
+# Environment files
+.env
+.env.*
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+coverage/
+
+# Docker files (not needed in container)
+Dockerfile
+docker-compose*.yml
+.dockerignore
