@@ -1,6 +1,6 @@
 /**
  * WHOIS API Server 3 - Port 4003
- * Simple WHOIS lookup microservice with caching
+ * Simple WHOIS lookup microservice with RDAP support for IP
  */
 
 const http = require('http');
@@ -25,40 +25,237 @@ function whoisLookup(domain) {
   });
 }
 
-/**
- * Query RDAP API for IP addresses
- */
-function rdapLookup(ip) {
+function rdapLookup(ip, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
-    const url = `https://rdap.arin.net/registry/ip/${ip}`;
+    const url = `https://rdap.org/ip/${ip}`;
 
-    https.get(url, { timeout: 30000 }, (response) => {
-      let data = '';
+    function makeRequest(requestUrl, redirectCount) {
+      if (redirectCount > maxRedirects) {
+        reject(new Error('Too many redirects'));
+        return;
+      }
 
-      response.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      response.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json);
-        } catch (e) {
-          reject(new Error('Failed to parse RDAP response'));
+      const options = {
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'WHOIS-Lookup-Service/1.0',
+          'Accept': 'application/rdap+json, application/json'
         }
+      };
+
+      https.get(requestUrl, options, (response) => {
+        if (response.statusCode === 301 || response.statusCode === 302 || response.statusCode === 307 || response.statusCode === 308) {
+          const redirectUrl = response.headers.location;
+          if (!redirectUrl) {
+            reject(new Error('Redirect without location header'));
+            return;
+          }
+          console.log(`[RDAP] Following redirect to: ${redirectUrl}`);
+          makeRequest(redirectUrl, redirectCount + 1);
+          return;
+        }
+
+        if (response.statusCode !== 200) {
+          reject(new Error(`RDAP server returned status ${response.statusCode}`));
+          return;
+        }
+
+        let data = '';
+
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        response.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json);
+          } catch (e) {
+            reject(new Error('Failed to parse RDAP response'));
+          }
+        });
+      }).on('error', (err) => {
+        reject(new Error(`RDAP lookup failed: ${err.message}`));
       });
-    }).on('error', (err) => {
-      reject(new Error(`RDAP lookup failed: ${err.message}`));
-    });
+    }
+
+    makeRequest(url, 0);
   });
 }
 
-/**
- * Parse RDAP response into our format
- */
+function formatRdapAsText(rdap) {
+  const lines = [];
+
+  if (rdap.startAddress) {
+    lines.push(`Name            ${rdap.startAddress}`);
+  }
+
+  if (rdap.status && rdap.status.length > 0) {
+    lines.push(`Status          ${rdap.status.join(', ')}`);
+  }
+
+  if (rdap.startAddress && rdap.endAddress) {
+    lines.push(`CIDR            ${rdap.startAddress}-${rdap.endAddress}`);
+  }
+
+  if (rdap.type) {
+    lines.push(`Net Type        ${rdap.type}`);
+  }
+
+  if (rdap.name) {
+    lines.push(`Net Name        ${rdap.name}`);
+  }
+
+  if (rdap.handle) {
+    const inetNum = rdap.handle.split(' - ')[0];
+    lines.push(`INet Num        ${inetNum}`);
+  }
+
+  if (rdap.startAddress && rdap.endAddress) {
+    lines.push(`Net Range       ${rdap.startAddress} - ${rdap.endAddress}`);
+  }
+
+  lines.push(`Whois Server    https://rdap.org`);
+
+  if (rdap.events) {
+    rdap.events.forEach(event => {
+      if (event.eventAction === 'registration') {
+        lines.push(`Creation Date   ${event.eventDate}`);
+      }
+    });
+  }
+
+  if (rdap.events) {
+    rdap.events.forEach(event => {
+      if (event.eventAction === 'last changed') {
+        lines.push(`Updated Date    ${event.eventDate}`);
+      }
+    });
+  }
+
+  lines.push(`DNSSEC          unsigned`);
+
+  lines.push('');
+  lines.push('# Additional Information');
+  lines.push('');
+
+  if (rdap.country) {
+    lines.push(`Country:        ${rdap.country}`);
+  }
+
+  if (rdap.parentHandle) {
+    lines.push(`Parent:         ${rdap.parentHandle}`);
+  }
+
+  if (rdap.ipVersion) {
+    lines.push(`IP Version:     ${rdap.ipVersion}`);
+  }
+
+  if (rdap.cidr0_cidrs && rdap.cidr0_cidrs.length > 0) {
+    lines.push('');
+    lines.push('CIDR Blocks:');
+    rdap.cidr0_cidrs.forEach(cidr => {
+      lines.push(`  ${cidr.v4prefix}/${cidr.length}`);
+    });
+  }
+
+  lines.push('');
+
+  if (rdap.entities) {
+    rdap.entities.forEach(entity => {
+      const roles = entity.roles || [];
+      if (roles.includes('registrant')) {
+        const vcard = entity.vcardArray?.[1] || [];
+        let org = '', address = '';
+        vcard.forEach(field => {
+          if (field[0] === 'org') org = field[3];
+          if (field[0] === 'fn' && !org) org = field[3];
+          if (field[0] === 'adr' && field[1]?.label) address = field[1].label;
+        });
+        if (org) {
+          lines.push(`Organization:   ${org}`);
+        }
+        if (address) {
+          lines.push(`Address:        ${address.replace(/\n/g, '\n                ')}`);
+        }
+      }
+    });
+  }
+
+  if (rdap.entities) {
+    let hasContacts = false;
+    rdap.entities.forEach(entity => {
+      const roles = entity.roles || [];
+
+      if (roles.includes('administrative') || roles.includes('technical')) {
+        if (!hasContacts) {
+          lines.push('');
+          lines.push('# Contact Information');
+          hasContacts = true;
+        }
+
+        const vcard = entity.vcardArray?.[1] || [];
+        let name = '', phone = '', address = '';
+        vcard.forEach(field => {
+          if (field[0] === 'fn') name = field[3];
+          if (field[0] === 'tel') phone = field[3];
+          if (field[0] === 'adr' && field[1]?.label) address = field[1].label;
+        });
+
+        const roleType = roles.includes('administrative') ? 'Admin' : 'Tech';
+        lines.push('');
+        lines.push(`${roleType} Contact:  ${name}`);
+        if (phone) lines.push(`Phone:          ${phone}`);
+        if (address) lines.push(`Address:        ${address.replace(/\n/g, '\n                ')}`);
+      }
+
+      if (entity.entities) {
+        entity.entities.forEach(subEntity => {
+          const subRoles = subEntity.roles || [];
+          const subVcard = subEntity.vcardArray?.[1] || [];
+
+          if (subRoles.includes('abuse')) {
+            if (!hasContacts) {
+              lines.push('');
+              lines.push('# Contact Information');
+              hasContacts = true;
+            }
+
+            let name = '', email = '', address = '';
+            subVcard.forEach(field => {
+              if (field[0] === 'fn') name = field[3];
+              if (field[0] === 'email') email = field[3];
+              if (field[0] === 'adr' && field[1]?.label) address = field[1].label;
+            });
+
+            lines.push('');
+            lines.push(`Abuse Contact:  ${name}`);
+            if (email) lines.push(`Email:          ${email}`);
+            if (address) lines.push(`Address:        ${address.replace(/\n/g, '\n                ')}`);
+          }
+        });
+      }
+    });
+  }
+
+  if (rdap.remarks && rdap.remarks.length > 0) {
+    lines.push('');
+    lines.push('# Remarks');
+    rdap.remarks.forEach(remark => {
+      if (remark.description) {
+        remark.description.forEach(desc => {
+          lines.push(`  ${desc}`);
+        });
+      }
+    });
+  }
+
+  return lines.join('\n');
+}
+
 function parseRdapResponse(rdap) {
   const result = {
-    raw: JSON.stringify(rdap, null, 2),
+    raw: formatRdapAsText(rdap),
     parsed: {},
     network: {},
     organization: {},
