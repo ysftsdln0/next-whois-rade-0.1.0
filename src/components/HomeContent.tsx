@@ -26,6 +26,151 @@ interface ApiV2Response {
   error?: string;
   timestamp: string;
 }
+/**
+ * Parse additional information from raw WHOIS data
+ */
+function parseAdditionalInfoFromRaw(rawData: string): {
+  dates?: { created?: string; updated?: string; expires?: string };
+  registrar?: string;
+  registrantOrganization?: string;
+  registrantName?: string;
+  registrantEmail?: string;
+  registrantPhone?: string;
+  registrantAddress?: string;
+  nicHandle?: string;
+  status?: string[];
+} {
+  const info: Record<string, any> = {
+    dates: {}
+  };
+  
+  // Date patterns
+  const datePatterns = [
+    // Created patterns
+    { key: 'created', regex: /Created\s+(?:on|Date)?\s*:?\s*([^\n]+)/i },
+    { key: 'created', regex: /Creation\s+Date\s*:?\s*([^\n]+)/i },
+    { key: 'created', regex: /created\s*:\s*([^\n]+)/i },
+    { key: 'created', regex: /Registered\s+on\s*:?\s*([^\n]+)/i },
+    { key: 'created', regex: /Registration\s+Date\s*:?\s*([^\n]+)/i },
+    
+    // Updated patterns
+    { key: 'updated', regex: /Updated\s+(?:on|Date)?\s*:?\s*([^\n]+)/i },
+    { key: 'updated', regex: /Last\s+Updated?\s*(?:on|Date)?\s*:?\s*([^\n]+)/i },
+    { key: 'updated', regex: /Modified\s+(?:on|Date)?\s*:?\s*([^\n]+)/i },
+    
+    // Expires patterns
+    { key: 'expires', regex: /Expir(?:es|y|ation)\s+(?:on|Date)?\s*:?\s*([^\n]+)/i },
+    { key: 'expires', regex: /Registry\s+Expiry\s+Date\s*:?\s*([^\n]+)/i },
+  ];
+  
+  for (const pattern of datePatterns) {
+    if (!info.dates[pattern.key]) {
+      const match = rawData.match(pattern.regex);
+      if (match && match[1]) {
+        const dateStr = match[1].trim().replace(/\.+$/, ''); // Remove trailing dots
+        info.dates[pattern.key] = dateStr;
+      }
+    }
+  }
+  
+  // NIC Handle
+  const nicHandleMatch = rawData.match(/NIC\s+Handle\s*:?\s*([^\n]+)/i);
+  if (nicHandleMatch) {
+    info.nicHandle = nicHandleMatch[1].trim();
+  }
+  
+  // Registrar
+  const registrarMatch = rawData.match(/Registrar\s*:?\s*([^\n]+)/i);
+  if (registrarMatch) {
+    info.registrar = registrarMatch[1].trim();
+  }
+  
+  // Parse Registrant section - look for "** Registrant:" section
+  const registrantSection = rawData.match(/\*\*\s*Registrant:([^\*]+)/i);
+  if (registrantSection) {
+    const section = registrantSection[1];
+    
+    // Check if section contains privacy keywords
+    const hasPrivacy = /hidden\s+upon\s+user\s+request|privacy|redacted/i.test(section);
+    
+    if (!hasPrivacy) {
+      // Organization Name
+      const orgMatch = section.match(/Organization\s+Name\s*:?\s*([^\n]+)/i);
+      if (orgMatch) {
+        info.registrantOrganization = orgMatch[1].trim();
+      }
+      
+      // Address
+      const addrMatch = section.match(/Address\s*:?\s*([^\n]+)/i);
+      if (addrMatch) {
+        info.registrantAddress = addrMatch[1].trim();
+      }
+    }
+  }
+  
+  // Alternative: Try standard Registrant fields
+  if (!info.registrantOrganization) {
+    const orgMatch = rawData.match(/(?:Registrant\s+)?Organization(?:\s+Name)?\s*:?\s*([^\n]+)/i);
+    if (orgMatch && !orgMatch[1].toLowerCase().includes('privacy') && !orgMatch[1].toLowerCase().includes('hidden')) {
+      info.registrantOrganization = orgMatch[1].trim();
+    }
+  }
+  
+  // Registrant Name
+  const nameMatch = rawData.match(/Registrant\s+(?:Name|Contact)?\s*:?\s*([^\n]+)/i);
+  if (nameMatch && !nameMatch[1].toLowerCase().includes('privacy') && !nameMatch[1].toLowerCase().includes('hidden')) {
+    info.registrantName = nameMatch[1].trim();
+  }
+  
+  // Registrant Email
+  const emailMatch = rawData.match(/(?:Registrant\s+)?Email\s*:?\s*([^\n]+)/i);
+  if (emailMatch && !emailMatch[1].toLowerCase().includes('privacy') && !emailMatch[1].toLowerCase().includes('hidden')) {
+    info.registrantEmail = emailMatch[1].trim();
+  }
+  
+  // Registrant Phone
+  const phoneMatch = rawData.match(/(?:Registrant\s+)?Phone\s*:?\s*([^\n]+)/i);
+  if (phoneMatch && !phoneMatch[1].toLowerCase().includes('privacy')) {
+    info.registrantPhone = phoneMatch[1].trim();
+  }
+  
+  // Domain Status - collect all status lines
+  const statuses: string[] = [];
+  
+  // Domain Status line
+  const domainStatusMatch = rawData.match(/Domain\s+Status\s*:?\s*([^\n]+)/i);
+  if (domainStatusMatch) {
+    statuses.push(domainStatusMatch[1].trim());
+  }
+  
+  // Frozen Status
+  const frozenStatusMatch = rawData.match(/Frozen\s+Status\s*:?\s*([^\n]+)/i);
+  if (frozenStatusMatch && frozenStatusMatch[1].trim()) {
+    statuses.push(`Frozen: ${frozenStatusMatch[1].trim()}`);
+  }
+  
+  // Transfer Status
+  const transferStatusMatch = rawData.match(/Transfer\s+Status\s*:?\s*([^\n]+)/i);
+  if (transferStatusMatch && transferStatusMatch[1].trim()) {
+    statuses.push(`Transfer: ${transferStatusMatch[1].trim()}`);
+  }
+  
+  // EPP Status codes (for gTLDs)
+  const eppStatusMatches = rawData.matchAll(/(?:Status|Domain Status)\s*:?\s*(client\w+|server\w+|ok|pending\w+|auto\w+|inactive)/gi);
+  for (const match of eppStatusMatches) {
+    const status = match[1].trim();
+    if (status && !statuses.includes(status)) {
+      statuses.push(status);
+    }
+  }
+  
+  if (statuses.length > 0) {
+    info.status = statuses;
+  }
+  
+  return info;
+}
+
 export default function HomeContent() {
   const [mounted, setMounted] = useState(false);
   const [result, setResult] = useState<WhoisResultType | null>(null);
@@ -97,6 +242,23 @@ export default function HomeContent() {
             rawData.toLowerCase().includes('no entries found') ||
             Object.keys(parsed).length === 0;
 
+          // Parse additional information from raw data if not available in parsed data
+          const rawInfo = parseAdditionalInfoFromRaw(rawData);
+          const creationDate = data.data.dates?.created || 
+                              (data.data.parsed?.creationDate as string) || 
+                              rawInfo.dates?.created;
+          const expirationDate = data.data.dates?.expires || 
+                                (data.data.parsed?.expirationDate as string) || 
+                                rawInfo.dates?.expires;
+          const updatedDate = data.data.dates?.updated || 
+                             (data.data.parsed?.updatedDate as string) || 
+                             rawInfo.dates?.updated;
+          const registrar = (data.data.parsed?.registrar as string) || rawInfo.registrar;
+          const status = (data.data.parsed?.status as string[]) || rawInfo.status;
+          const registrantOrganization = (data.data.parsed?.registrantOrganization as string) || rawInfo.registrantOrganization;
+          const registrantName = (data.data.parsed?.registrantName as string) || rawInfo.registrantName;
+          const nicHandle = (data.data.parsed as any)?.nicHandle || rawInfo.nicHandle;
+
           const whoisResult: WhoisResultType = {
             domain: data.domain || query,
             timestamp: new Date().toISOString(),
@@ -116,23 +278,28 @@ export default function HomeContent() {
                     : {
                       domainName:
                         (data.data.parsed?.domainName as string) || query,
-                      registrar: data.data.parsed
-                        ?.registrar as string,
+                      nicHandle,
+                      registrar,
                       registrarUrl: data.data.parsed
                         ?.registrarUrl as string,
-                      creationDate:
-                        data.data.dates?.created ||
-                        (data.data.parsed?.creationDate as string),
-                      expirationDate:
-                        data.data.dates?.expires ||
-                        (data.data.parsed?.expirationDate as string),
-                      updatedDate:
-                        data.data.dates?.updated ||
-                        (data.data.parsed?.updatedDate as string),
+                      registrarIanaId: data.data.parsed
+                        ?.registrarIanaId as string,
+                      creationDate,
+                      expirationDate,
+                      updatedDate,
                       nameServers: data.data.parsed
                         ?.nameServers as string[],
-                      status: data.data.parsed?.status as string[],
+                      status,
                       dnssec: data.data.parsed?.dnssec as string,
+                      registrantName,
+                      registrantOrganization,
+                      registrantEmail: data.data.parsed?.registrantEmail as string,
+                      registrantPhone: data.data.parsed?.registrantPhone as string,
+                      registrantStreet: data.data.parsed?.registrantStreet as string,
+                      registrantCity: data.data.parsed?.registrantCity as string,
+                      registrantState: data.data.parsed?.registrantState as string,
+                      registrantPostalCode: data.data.parsed?.registrantPostalCode as string,
+                      registrantCountry: data.data.parsed?.registrantCountry as string,
                       rawData: data.data.raw,
                     },
               },
@@ -147,22 +314,28 @@ export default function HomeContent() {
                 : {
                   domainName:
                     (data.data.parsed?.domainName as string) || query,
-                  registrar: data.data.parsed?.registrar as string,
+                  nicHandle,
+                  registrar,
                   registrarUrl: data.data.parsed
                     ?.registrarUrl as string,
-                  creationDate:
-                    data.data.dates?.created ||
-                    (data.data.parsed?.creationDate as string),
-                  expirationDate:
-                    data.data.dates?.expires ||
-                    (data.data.parsed?.expirationDate as string),
-                  updatedDate:
-                    data.data.dates?.updated ||
-                    (data.data.parsed?.updatedDate as string),
+                  registrarIanaId: data.data.parsed
+                    ?.registrarIanaId as string,
+                  creationDate,
+                  expirationDate,
+                  updatedDate,
                   nameServers: data.data.parsed
                     ?.nameServers as string[],
-                  status: data.data.parsed?.status as string[],
+                  status,
                   dnssec: data.data.parsed?.dnssec as string,
+                  registrantName,
+                  registrantOrganization,
+                  registrantEmail: data.data.parsed?.registrantEmail as string,
+                  registrantPhone: data.data.parsed?.registrantPhone as string,
+                  registrantStreet: data.data.parsed?.registrantStreet as string,
+                  registrantCity: data.data.parsed?.registrantCity as string,
+                  registrantState: data.data.parsed?.registrantState as string,
+                  registrantPostalCode: data.data.parsed?.registrantPostalCode as string,
+                  registrantCountry: data.data.parsed?.registrantCountry as string,
                   rawData: data.data.raw,
                 },
             errors: [],

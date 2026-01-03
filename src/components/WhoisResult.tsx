@@ -13,7 +13,8 @@ interface WhoisResultProps {
  * Shows lookup results in multiple formats
  */
 export default function WhoisResult({ result, queryType = 'domain' }: WhoisResultProps) {
-  const [showRawData, setShowRawData] = useState(false);
+  // For IP queries, show raw data by default
+  const [showRawData, setShowRawData] = useState(queryType === 'ip');
 
   /**
    * Format date string for display
@@ -32,43 +33,48 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   };
 
   /**
-   * Check if registrant WHOIS data is privacy protected
+   * Check if WHOIS data is privacy protected
    */
-  const isRegistrantPrivacyProtected = useMemo(() => {
+  const isPrivacyProtected = useMemo(() => {
     const whoisData = result?.data;
     if (!whoisData) return false;
 
     const privacyKeywords = [
       'redacted for privacy',
-      'privacy',
       'whoisguard',
       'domains by proxy',
       'private registration',
       'contact privacy',
       'domain protection',
       'whois privacy',
-      'proxy',
       'privacy service',
       'hidden upon user request'
     ];
 
+    // Only check specific registrant fields, not entire raw data
     const fieldsToCheck = [
       whoisData.registrantName,
       whoisData.registrantOrganization,
       whoisData.registrantEmail,
     ].filter(Boolean).map(f => f!.toLowerCase());
     
+    // If we have no registrant data fields, check if any contain privacy keywords
+    if (fieldsToCheck.length === 0) {
+      // Check raw data for registrant section only
+      if (whoisData.rawData) {
+        const registrantSection = whoisData.rawData.match(/\*\*\s*Registrant:([\s\S]*?)(?=\*\*|$)/i);
+        if (registrantSection && registrantSection[1]) {
+          const sectionText = registrantSection[1].toLowerCase();
+          return privacyKeywords.some(keyword => sectionText.includes(keyword));
+        }
+      }
+      return false;
+    }
+    
     for (const field of fieldsToCheck) {
       if (privacyKeywords.some(keyword => field.includes(keyword))) {
         return true;
       }
-    }
-
-    if (whoisData.rawData) {
-        const rawText = whoisData.rawData.toLowerCase();
-        if (privacyKeywords.some(keyword => rawText.includes(keyword))) {
-            return true;
-        }
     }
     
     return false;
@@ -81,7 +87,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     const data = result.data;
     if (!data) return [];
 
-    const registrantFields = isRegistrantPrivacyProtected 
+    const registrantFields = isPrivacyProtected 
       ? [{ 
           label: 'Durum', 
           value: 'Kullanıcı talebiyle gizlenmiştir', 
@@ -108,13 +114,11 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         ),
         fields: [
           { label: 'Domain Adı', value: data.domainName },
+          { label: 'NIC Handle', value: (data as any).nicHandle },
           { label: 'Kayıt Firması', value: data.registrar },
           { label: 'Kayıt Firması URL', value: data.registrarUrl, isLink: true },
           { label: 'Kayıt Firması IANA ID', value: data.registrarIanaId },
           { label: 'DNSSEC', value: data.dnssec },
-          ...(Array.isArray(data.nameServers) && data.nameServers.length > 0
-            ? data.nameServers.map((ns, i) => ({ label: `Nameserver ${i + 1}`, value: ns }))
-            : []),
         ],
       },
       {
@@ -155,10 +159,21 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         ),
-        fields: data.status?.map((status, i) => ({ label: `Durum ${i + 1}`, value: status })) || [],
+        fields: data.status?.map((status, i) => {
+          // Better labels for different status types
+          let label = 'Durum';
+          if (status.toLowerCase().includes('transfer')) {
+            label = 'Transfer';
+          } else if (status.toLowerCase().includes('frozen')) {
+            label = 'Frozen';
+          } else if (i > 0) {
+            label = `Durum ${i + 1}`;
+          }
+          return { label, value: status };
+        }) || [],
       },
     ];
-  }, [result.data, isRegistrantPrivacyProtected]);
+  }, [result.data, isPrivacyProtected]);
 
   return (
     <div className="bg-white rounded-2xl border-2 border-[#34495E] overflow-hidden">
@@ -183,17 +198,29 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
       {/* Content */}
       <div className="p-5 md:p-6">
-        {/* Formatted view */}
-        {result.data && (
+        {/* Formatted view - only for domain queries */}
+        {result.data && queryType === 'domain' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
-            {dataGroups.map((group) => {
-              const hasData = group.fields.some(f => f.value);
+            {dataGroups.map((group, groupIndex) => {
+              const hasData = group.fields.some(f => f.value && f.value !== 'N/A');
               if (!hasData) return null;
+
+              // Count total visible cards
+              const visibleCards = dataGroups.filter(g => 
+                g.fields.some(f => f.value && f.value !== 'N/A')
+              );
+              const totalCards = visibleCards.length;
+              const isLastCard = groupIndex === dataGroups.length - 1;
+              
+              // If odd number of cards and this is the last one, make it full width
+              const shouldSpanFull = totalCards % 2 !== 0 && isLastCard;
 
               return (
                 <div 
                   key={group.title}
-                  className="bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors"
+                  className={`bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors ${
+                    shouldSpanFull ? 'lg:col-span-2' : ''
+                  }`}
                 >
                   <div className="flex items-center gap-2 mb-4 text-[#34495E]">
                     {group.icon}
@@ -258,13 +285,116 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             
             {showRawData && (
               <div className="mt-4 p-4 bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl">
-                <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
+                <div className="space-y-3">
                   {result.data.rawData
                     .split('\n')
-                    .filter(line => !line.trim().startsWith('%') && !line.trim().startsWith('#') && !line.trim().startsWith('>>>'))
-                    .join('\n')
-                    .trim()}
-                </pre>
+                    .filter(line => {
+                      const trimmed = line.trim().toLowerCase();
+                      const original = line.trim();
+                      
+                      // Skip empty lines
+                      if (trimmed === '') return false;
+                      
+                      // For IP queries, show more data with minimal filtering
+                      if (queryType === 'ip') {
+                        // Only skip comments and basic metadata
+                        if (trimmed.startsWith('%') || 
+                            trimmed.startsWith('#') || 
+                            trimmed.startsWith('>>>')) return false;
+                        
+                        // Skip legal text
+                        if (trimmed.includes('terms of use') ||
+                            trimmed.includes('copyright') ||
+                            trimmed.includes('for more information')) return false;
+                        
+                        return true;
+                      }
+                      
+                      // For domain queries, apply stricter filtering
+                      // Skip comment and metadata lines
+                      if (trimmed.startsWith('%') || 
+                          trimmed.startsWith('#') || 
+                          trimmed.startsWith('>>>')) return false;
+                      
+                      // Skip technical server information
+                      if (trimmed.startsWith('refer:') ||
+                          trimmed.startsWith('whois:') ||
+                          trimmed.startsWith('source:') ||
+                          trimmed.startsWith('changed:') ||
+                          trimmed.startsWith('remarks:')) return false;
+                      
+                      // Skip DNSSEC and technical details
+                      if (trimmed.startsWith('dnssec:') ||
+                          trimmed.startsWith('ds-rdata:') ||
+                          trimmed.startsWith('last update of') ||
+                          trimmed.startsWith('>>> last update')) return false;
+                      
+                      // Skip contact details (admin, tech, billing)
+                      if (trimmed.startsWith('contact:') ||
+                          trimmed.startsWith('admin ') ||
+                          trimmed.startsWith('tech ') ||
+                          trimmed.startsWith('billing ') ||
+                          trimmed.startsWith('name:') ||
+                          trimmed.startsWith('phone:') ||
+                          trimmed.startsWith('e-mail:') ||
+                          trimmed.startsWith('email:') ||
+                          trimmed.startsWith('fax-no:')) return false;
+                      
+                      // Skip IANA and registry organization details
+                      if (trimmed.startsWith('organisation:') ||
+                          trimmed.startsWith('address:') ||
+                          original.includes('IANA') ||
+                          original.includes('Registry Services')) return false;
+                      
+                      // Skip nameserver IP addresses
+                      if (trimmed.startsWith('nserver:')) return false;
+                      
+                      // Skip domain if it's just a TLD (like "domain: COM")
+                      if (trimmed.startsWith('domain:') && !trimmed.includes(result.domain.toLowerCase())) {
+                        return false;
+                      }
+                      
+                      // Skip legal and policy text
+                      if (trimmed.includes('terms of use') ||
+                          trimmed.includes('terms and conditions') ||
+                          trimmed.includes('copyright') ||
+                          trimmed.includes('agreement') ||
+                          trimmed.includes('policy') ||
+                          trimmed.includes('for more information') ||
+                          trimmed.includes('please visit') ||
+                          trimmed.includes('http://') ||
+                          trimmed.includes('https://')) return false;
+                      
+                      // Skip status descriptions in parentheses
+                      if (trimmed.includes('(') && trimmed.includes(')') && 
+                          !trimmed.startsWith('domain')) return false;
+                      
+                      return true;
+                    })
+                    .map((line, index) => {
+                      const parts = line.split(':');
+                      if (parts.length >= 2) {
+                        const key = parts[0].trim();
+                        const value = parts.slice(1).join(':').trim();
+                        
+                        // Clean up the value
+                        const cleanValue = value.replace(/\.+$/, ''); // Remove trailing dots
+                        
+                        return (
+                          <div key={index} className="flex flex-col sm:flex-row gap-2 py-2 border-b border-[#34495E]/10 last:border-0">
+                            <dt className="text-xs font-medium text-[#34495E]/70 sm:w-48 flex-shrink-0 capitalize">
+                              {key}
+                            </dt>
+                            <dd className="text-sm text-[#34495E] font-mono break-words">
+                              {cleanValue}
+                            </dd>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })
+                    .filter(Boolean)}
+                </div>
               </div>
             )}
           </div>
