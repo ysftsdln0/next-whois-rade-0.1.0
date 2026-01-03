@@ -32,9 +32,9 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   };
 
   /**
-   * Check if WHOIS data is privacy protected
+   * Check if registrant WHOIS data is privacy protected
    */
-  const isPrivacyProtected = useMemo(() => {
+  const isRegistrantPrivacyProtected = useMemo(() => {
     const whoisData = result?.data;
     if (!whoisData) return false;
 
@@ -57,7 +57,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
       whoisData.registrantOrganization,
       whoisData.registrantEmail,
     ].filter(Boolean).map(f => f!.toLowerCase());
-
+    
     for (const field of fieldsToCheck) {
       if (privacyKeywords.some(keyword => field.includes(keyword))) {
         return true;
@@ -65,12 +65,12 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     }
 
     if (whoisData.rawData) {
-      const rawText = whoisData.rawData.toLowerCase();
-      if (privacyKeywords.some(keyword => rawText.includes(keyword))) {
-        return true;
-      }
+        const rawText = whoisData.rawData.toLowerCase();
+        if (privacyKeywords.some(keyword => rawText.includes(keyword))) {
+            return true;
+        }
     }
-
+    
     return false;
   }, [result.data]);
 
@@ -81,23 +81,23 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     const data = result.data;
     if (!data) return [];
 
-    const registrantFields = isPrivacyProtected
-      ? [{
-        label: 'Durum',
-        value: 'Kullanıcı talebiyle gizlenmiştir',
-        isPrivacyProtected: true
-      }]
+    const registrantFields = isRegistrantPrivacyProtected 
+      ? [{ 
+          label: 'Durum', 
+          value: 'Kullanıcı talebiyle gizlenmiştir', 
+          isPrivacyProtected: true 
+        }]
       : [
-        { label: 'İsim', value: data.registrantName },
-        { label: 'Kuruluş', value: data.registrantOrganization },
-        { label: 'Adres', value: data.registrantStreet },
-        { label: 'Şehir', value: data.registrantCity },
-        { label: 'İl', value: data.registrantState },
-        { label: 'Posta Kodu', value: data.registrantPostalCode },
-        { label: 'Ülke', value: data.registrantCountry },
-        { label: 'E-posta', value: data.registrantEmail },
-        { label: 'Telefon', value: data.registrantPhone },
-      ];
+          { label: 'İsim', value: data.registrantName },
+          { label: 'Kuruluş', value: data.registrantOrganization },
+          { label: 'Adres', value: data.registrantStreet },
+          { label: 'Şehir', value: data.registrantCity },
+          { label: 'İl', value: data.registrantState },
+          { label: 'Posta Kodu', value: data.registrantPostalCode },
+          { label: 'Ülke', value: data.registrantCountry },
+          { label: 'E-posta', value: data.registrantEmail },
+          { label: 'Telefon', value: data.registrantPhone },
+        ];
     return [
       {
         title: 'Domain',
@@ -124,14 +124,11 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         ),
-        fields: isPrivacyProtected
-          ? []
-          : [
-            { label: 'Oluşturulma', value: formatDate(data.creationDate) },
-            { label: 'Güncelleme', value: formatDate(data.updatedDate) },
-            { label: 'Bitiş', value: formatDate(data.expirationDate) },
-          ],
-        isPrivacyProtected: isPrivacyProtected,
+        fields: [
+          { label: 'Oluşturulma', value: formatDate(data.creationDate) },
+          { label: 'Güncelleme', value: formatDate(data.updatedDate) },
+          { label: 'Bitiş', value: formatDate(data.expirationDate) },
+        ],
       },
       {
         title: 'Kayıt Sahibi',
@@ -161,7 +158,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         fields: data.status?.map((status, i) => ({ label: `Durum ${i + 1}`, value: status })) || [],
       },
     ];
-  }, [result.data, isPrivacyProtected]);
+  }, [result.data, isRegistrantPrivacyProtected]);
 
   return (
     <div className="bg-white rounded-2xl border-2 border-[#34495E] overflow-hidden">
@@ -186,116 +183,91 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
 
       {/* Content */}
       <div className="p-5 md:p-6">
-        {/* IP Query - Show only raw data */}
-        {queryType === 'ip' && result.data?.rawData && (
-          <div className="p-4 bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl">
-            <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
-              {result.data.rawData
-                .split('\n')
-                .filter(line => !line.trim().startsWith('%') && !line.trim().startsWith('#') && !line.trim().startsWith('>>>'))
-                .join('\n')
-                .trim()}
-            </pre>
+        {/* Formatted view */}
+        {result.data && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
+            {dataGroups.map((group) => {
+              const hasData = group.fields.some(f => f.value);
+              if (!hasData) return null;
+
+              return (
+                <div 
+                  key={group.title}
+                  className="bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-4 text-[#34495E]">
+                    {group.icon}
+                    <h3 className="text-xs uppercase tracking-wider font-medium">{group.title}</h3>
+                  </div>
+                  <dl className="space-y-2">
+                    {group.fields.map((field, i) => {
+                      if (!field.value || field.value === 'N/A') return null;
+                      if ('isPrivacyProtected' in field && field.isPrivacyProtected) {
+                        return (
+                          <div key={i} className="flex items-center gap-2">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <dd className="text-sm font-semibold text-gray-600 font-mono">
+                              {field.value}
+                            </dd>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
+                          <dt className="text-xs text-[#34495E]/60 sm:w-24 flex-shrink-0">
+                            {field.label}
+                          </dt>
+                          <dd className="text-sm text-[#34495E] break-all font-mono">
+                            {field.value?.startsWith('http') || field.value?.startsWith('https') ? (
+                              <a 
+                                href={field.value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#34495E]/80 hover:text-[#34495E] animated-underline"
+                              >
+                                {field.value}
+                              </a>
+                            ) : (
+                              field.value
+                            )}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* Domain Query - Show formatted view */}
-        {queryType === 'domain' && result.data && (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-children">
-              {dataGroups.map((group) => {
-                const hasData = group.fields.some(f => f.value);
-                // Always show Tarihler if privacy is enabled, even if fields are empty
-                if (!hasData && !(group.title === 'Tarihler' && group.isPrivacyProtected)) return null;
-
-                return (
-                  <div
-                    key={group.title}
-                    className="bg-white border-2 border-[#34495E] rounded-xl p-4 hover:border-[#34495E]/80 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-4 text-[#34495E]">
-                      {group.icon}
-                      <h3 className="text-xs uppercase tracking-wider font-medium">{group.title}</h3>
-                    </div>
-                    {/* Tarihler privacy message */}
-                    {group.title === 'Tarihler' && group.isPrivacyProtected && (
-                      <div className="mb-2 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        <span className="text-sm font-semibold text-gray-600 font-mono">Kullanıcı talebiyle gizlenmiştir</span>
-                      </div>
-                    )}
-                    <dl className="space-y-2">
-                      {group.fields.map((field, i) => {
-                        if (!field.value || field.value === 'N/A') return null;
-                        if ('isPrivacyProtected' in field && field.isPrivacyProtected) {
-                          return (
-                            <div key={i} className="flex items-center gap-2">
-                              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              <dd className="text-sm font-semibold text-gray-600 font-mono">
-                                {field.value}
-                              </dd>
-                            </div>
-                          )
-                        }
-                        return (
-                          <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
-                            <dt className="text-xs text-[#34495E]/60 sm:w-24 flex-shrink-0">
-                              {field.label}
-                            </dt>
-                            <dd className="text-sm text-[#34495E] break-all font-mono">
-                              {field.value?.startsWith('http') || field.value?.startsWith('https') ? (
-                                <a
-                                  href={field.value}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#34495E]/80 hover:text-[#34495E] animated-underline"
-                                >
-                                  {field.value}
-                                </a>
-                              ) : (
-                                field.value
-                              )}
-                            </dd>
-                          </div>
-                        );
-                      })}
-                    </dl>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Raw Data Button and Section for Domain queries */}
-            {result.data?.rawData && (
-              <div className="mt-6">
-                <button
-                  onClick={() => setShowRawData(!showRawData)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#34495E] text-white rounded-xl hover:bg-[#2c3e50] transition-colors"
-                >
-                  <svg className={`w-4 h-4 transition-transform ${showRawData ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  <span className="font-medium">Detaylı WHOIS Bilgisi</span>
-                </button>
-
-                {showRawData && (
-                  <div className="mt-4 p-4 bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl">
-                    <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
-                      {result.data.rawData
-                        .split('\n')
-                        .filter(line => !line.trim().startsWith('%') && !line.trim().startsWith('#') && !line.trim().startsWith('>>>'))
-                        .join('\n')
-                        .trim()}
-                    </pre>
-                  </div>
-                )}
+        {/* Raw Data Button and Section */}
+        {result.data?.rawData && (
+          <div className="mt-6">
+            <button
+              onClick={() => setShowRawData(!showRawData)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#34495E] text-white rounded-xl hover:bg-[#2c3e50] transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${showRawData ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              <span className="font-medium">Detaylı WHOIS Bilgisi</span>
+            </button>
+            
+            {showRawData && (
+              <div className="mt-4 p-4 bg-[#34495E]/5 border-2 border-[#34495E] rounded-xl">
+                <pre className="text-xs text-[#34495E] font-mono whitespace-pre-wrap overflow-x-auto">
+                  {result.data.rawData
+                    .split('\n')
+                    .filter(line => !line.trim().startsWith('%') && !line.trim().startsWith('#') && !line.trim().startsWith('>>>'))
+                    .join('\n')
+                    .trim()}
+                </pre>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* No data message */}
@@ -309,9 +281,9 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
             {queryType === 'domain' ? (
               <>
                 <p className="text-[#34495E]/70 mb-4">Bu domain için WHOIS verisi bulunamadı</p>
-                <a
-                  href="https://radehosting.com"
-                  target="_blank"
+                <a 
+                  href="https://radehosting.com" 
+                  target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-[#34495E] text-white rounded-lg hover:bg-[#2c3e50] transition-colors font-medium"
                 >
