@@ -402,6 +402,25 @@ function parseWhoisResponse(raw) {
     }
   }
 
+  // Eğer nameserver bulunamadıysa, "** Domain Servers:" formatını dene (Trabis)
+  if (!result.parsed.nameServers || result.parsed.nameServers.length === 0) {
+    const domainServersMatch = raw.match(/\*\*\s*Domain Servers:\s*\n([\s\S]*?)(?=\n\*\*|\n\n|$)/i);
+    if (domainServersMatch) {
+      const serversSection = domainServersMatch[1];
+      const serverLines = serversSection.split('\n');
+      const servers = [];
+      for (const line of serverLines) {
+        const trimmed = line.trim();
+        if (trimmed && /^[a-z0-9][\w\-\.]+\.[a-z]{2,}$/i.test(trimmed.split(/\s+/)[0])) {
+          servers.push(trimmed.split(/\s+/)[0].trim());
+        }
+      }
+      if (servers.length > 0) {
+        result.parsed.nameServers = servers;
+      }
+    }
+  }
+
   // Contact patterns
   const contactTypes = ['Registrant', 'Admin', 'Tech'];
   const contactFields = ['Name', 'Organization', 'Email', 'Country'];

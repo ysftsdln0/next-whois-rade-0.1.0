@@ -161,8 +161,12 @@ function parseWhoisText(rawData: string, domain: string): WhoisData {
       case 'dns':
       case 'host name':
       case 'isim sunucusu':
-        if (value && !nameServers.includes(value.toLowerCase())) {
-          nameServers.push(value.toLowerCase());
+      case 'nameservers':
+      case 'name servers':
+        // Nameserver değerini parçala - boşluk veya tab ile ayrılmış ilk kısmı al
+        const nsValue = value.toLowerCase().split(/[\s\t]+/)[0];
+        if (nsValue && !nameServers.includes(nsValue)) {
+          nameServers.push(nsValue);
         }
         break;
       case 'dnssec':
@@ -176,6 +180,38 @@ function parseWhoisText(rawData: string, domain: string): WhoisData {
           statuses.push(statusValue);
         }
         break;
+    }
+  }
+
+  // Eğer nameserver bulunamadıysa, özel formatları dene
+  if (nameServers.length === 0) {
+    // "** Domain Servers:" bölümünü ara (Trabis formatı)
+    const domainServersMatch = rawData.match(/\*\*\s*Domain Servers:\s*\n([\s\S]*?)(?=\n\*\*|\n\n|$)/i);
+    if (domainServersMatch) {
+      const serversSection = domainServersMatch[1];
+      const serverLines = serversSection.split('\n');
+      for (const line of serverLines) {
+        const trimmed = line.trim();
+        // Domain pattern'i kontrol et
+        if (trimmed && /^[a-z0-9][\w\-\.]+\.[a-z]{2,}$/i.test(trimmed.split(/\s+/)[0])) {
+          const ns = trimmed.split(/\s+/)[0].toLowerCase();
+          if (!nameServers.includes(ns)) {
+            nameServers.push(ns);
+          }
+        }
+      }
+    }
+    
+    // Hala bulunamadıysa, genel regex ile dene
+    if (nameServers.length === 0) {
+      const nsRegex = /(?:nserver|name\s*server|nameserver|ns):\s*([a-z0-9][\w\-\.]+\.[a-z]{2,})/gi;
+      let match;
+      while ((match = nsRegex.exec(rawData)) !== null) {
+        const ns = match[1].toLowerCase().trim();
+        if (ns && !nameServers.includes(ns)) {
+          nameServers.push(ns);
+        }
+      }
     }
   }
 

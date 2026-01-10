@@ -17,66 +17,152 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   const [showRawData, setShowRawData] = useState(queryType === 'ip');
 
   /**
+   * Parse various WHOIS date formats into a Date object
+   */
+  const parseDate = (input: string | undefined): Date | null => {
+    if (!input) return null;
+
+    const dateStr = input.toString().trim();
+    if (!dateStr) return null;
+
+    // Unix timestamp (seconds or milliseconds)
+    if (/^\d+$/.test(dateStr)) {
+      const num = Number(dateStr);
+      if (!Number.isNaN(num)) {
+        const ms = dateStr.length === 10 ? num * 1000 : num;
+        const d = new Date(ms);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+    }
+
+    // DD.MM.YYYY (common in WHOIS and TR locale)
+    const dotMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (dotMatch) {
+      const [, d, m, y] = dotMatch;
+      const day = Number(d);
+      const month = Number(m) - 1; // 0-based
+      const year = Number(y);
+      const parsed = new Date(Date.UTC(year, month, day));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // YYYY-MM-DD (ISO date without time)
+    const ymdMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (ymdMatch) {
+      const [, y, m, d] = ymdMatch;
+      const year = Number(y);
+      const month = Number(m) - 1;
+      const day = Number(d);
+      const parsed = new Date(Date.UTC(year, month, day));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Other regional formats with '/', e.g. MM/DD/YYYY or DD/MM/YYYY
+    const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+      const [, a, b, y] = slashMatch;
+      const n1 = Number(a);
+      const n2 = Number(b);
+      const year = Number(y);
+      let month: number;
+      let day: number;
+
+      if (n1 > 12 && n2 <= 12) {
+        // Clearly DD/MM/YYYY
+        day = n1;
+        month = n2 - 1;
+      } else if (n2 > 12 && n1 <= 12) {
+        // Clearly MM/DD/YYYY
+        month = n1 - 1;
+        day = n2;
+      } else {
+        // Ambiguous - default to DD/MM/YYYY for tr-TR audience
+        day = n1;
+        month = n2 - 1;
+      }
+
+      const parsed = new Date(Date.UTC(year, month, day));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    // Fallback: let JS handle ISO 8601 and other standard formats
+    const fallback = new Date(dateStr);
+    if (!Number.isNaN(fallback.getTime())) {
+      return fallback;
+    }
+
+    return null;
+  };
+
+  /**
    * Format date string for display
    */
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'N/A';
-    try {
-      return new Date(dateStr).toLocaleDateString('tr-TR', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
+
+    const parsed = parseDate(dateStr);
+    if (!parsed) {
+      // If we can't parse, show original string as a fallback
       return dateStr;
+    }
+
+    return new Intl.DateTimeFormat('tr-TR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(parsed);
+  };
+
+  /**
+   * Calculate domain age
+   */
+  const calculateDomainAge = (creationDate: string | undefined) => {
+    if (!creationDate) return 'N/A';
+    try {
+      const created = parseDate(creationDate);
+      if (!created) return 'N/A';
+      const now = new Date();
+      const diff = now.getTime() - created.getTime();
+      
+      const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365));
+      const months = Math.floor((diff % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+      const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 30)) / (1000 * 60 * 60 * 24));
+      
+      const parts = [];
+      if (years > 0) parts.push(`${years} Yıl`);
+      if (months > 0) parts.push(`${months} Ay`);
+      if (days > 0) parts.push(`${days} Gün`);
+      
+      return parts.join(', ') || '0 Gün';
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  /**
+   * Calculate days until expiration
+   */
+  const calculateDaysUntilExpiry = (expirationDate: string | undefined) => {
+    if (!expirationDate) return null;
+    try {
+      const expiry = parseDate(expirationDate);
+      if (!expiry) return null;
+      const now = new Date();
+      const diff = expiry.getTime() - now.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      
+      return days > 0 ? days : 0;
+    } catch {
+      return null;
     }
   };
 
   /**
    * Check if WHOIS data is privacy protected
+   * Disabled - show all information regardless of privacy status
    */
   const isPrivacyProtected = useMemo(() => {
-    const whoisData = result?.data;
-    if (!whoisData) return false;
-
-    const privacyKeywords = [
-      'redacted for privacy',
-      'whoisguard',
-      'domains by proxy',
-      'private registration',
-      'contact privacy',
-      'domain protection',
-      'whois privacy',
-      'privacy service',
-      'hidden upon user request'
-    ];
-
-    // Only check specific registrant fields, not entire raw data
-    const fieldsToCheck = [
-      whoisData.registrantName,
-      whoisData.registrantOrganization,
-      whoisData.registrantEmail,
-    ].filter(Boolean).map(f => f!.toLowerCase());
-    
-    // If we have no registrant data fields, check if any contain privacy keywords
-    if (fieldsToCheck.length === 0) {
-      // Check raw data for registrant section only
-      if (whoisData.rawData) {
-        const registrantSection = whoisData.rawData.match(/\*\*\s*Registrant:([\s\S]*?)(?=\*\*|$)/i);
-        if (registrantSection && registrantSection[1]) {
-          const sectionText = registrantSection[1].toLowerCase();
-          return privacyKeywords.some(keyword => sectionText.includes(keyword));
-        }
-      }
-      return false;
-    }
-    
-    for (const field of fieldsToCheck) {
-      if (privacyKeywords.some(keyword => field.includes(keyword))) {
-        return true;
-      }
-    }
-    
+    // Always return false to show all available information
     return false;
   }, [result.data]);
 
@@ -87,23 +173,20 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
     const data = result.data;
     if (!data) return [];
 
-    const registrantFields = isPrivacyProtected 
-      ? [{ 
-          label: 'Durum', 
-          value: 'Kullanıcı talebiyle gizlenmiştir', 
-          isPrivacyProtected: true 
-        }]
-      : [
-          { label: 'İsim', value: data.registrantName },
-          { label: 'Kuruluş', value: data.registrantOrganization },
-          { label: 'Adres', value: data.registrantStreet },
-          { label: 'Şehir', value: data.registrantCity },
-          { label: 'İl', value: data.registrantState },
-          { label: 'Posta Kodu', value: data.registrantPostalCode },
-          { label: 'Ülke', value: data.registrantCountry },
-          { label: 'E-posta', value: data.registrantEmail },
-          { label: 'Telefon', value: data.registrantPhone },
-        ];
+    const registrantFields = [
+      { label: 'İsim', value: data.registrantName },
+      { label: 'Kuruluş', value: data.registrantOrganization },
+      { label: 'Adres', value: data.registrantStreet },
+      { label: 'Şehir', value: data.registrantCity },
+      { label: 'İl', value: data.registrantState },
+      { label: 'Posta Kodu', value: data.registrantPostalCode },
+      { label: 'Ülke', value: data.registrantCountry },
+      { label: 'E-posta', value: data.registrantEmail },
+      { label: 'Telefon', value: data.registrantPhone },
+    ];
+        
+    const daysUntilExpiry = calculateDaysUntilExpiry(data.expirationDate);
+    
     return [
       {
         title: 'Domain',
@@ -131,7 +214,11 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         fields: [
           { label: 'Oluşturulma', value: formatDate(data.creationDate) },
           { label: 'Güncelleme', value: formatDate(data.updatedDate) },
-          { label: 'Bitiş', value: formatDate(data.expirationDate) },
+          { 
+            label: 'Bitiş', 
+            value: formatDate(data.expirationDate),
+            extra: daysUntilExpiry !== null && daysUntilExpiry > 0 ? `${daysUntilExpiry} gün kaldı` : null
+          },
         ],
       },
       {
@@ -144,13 +231,13 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
         fields: registrantFields,
       },
       {
-        title: 'nameservers',
+        title: 'Name Servers (İsim Sunucuları)',
         icon: (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
           </svg>
         ),
-        fields: data.nameServers?.map((ns, i) => ({ label: `NS ${i + 1}`, value: ns })) || [],
+        fields: data.nameServers?.map((ns, i) => ({ label: `Nameserver ${i + 1}`, value: ns })) || [],
       },
       {
         title: 'Durum',
@@ -171,6 +258,32 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
           }
           return { label, value: status };
         }) || [],
+      },
+      {
+        title: 'Alan Adı Bilgileri',
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+        fields: [
+          { label: 'DOMAIN NAME', value: data.domainName },
+          { label: 'REGISTRAR', value: data.registrar },
+          { label: 'UPDATED DATE', value: formatDate(data.updatedDate) },
+          { label: 'DOMAIN YAŞI', value: calculateDomainAge(data.creationDate) },
+        ],
+      },
+      {
+        title: 'Kayıt Sahibi Bilgileri',
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        ),
+        fields: [
+          { label: 'REGISTRANT NAME', value: data.registrantName },
+          { label: 'ORGANIZATION', value: data.registrantOrganization },
+        ],
       },
     ];
   }, [result.data, isPrivacyProtected]);
@@ -241,11 +354,16 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
                           </div>
                         )
                       }
+                      
+                      const fullWidth = 'fullWidth' in field && field.fullWidth;
+                      
                       return (
-                        <div key={i} className="flex flex-col sm:flex-row sm:gap-4">
-                          <dt className="text-xs text-[#34495E]/60 sm:w-24 flex-shrink-0">
-                            {field.label}
-                          </dt>
+                        <div key={i} className={fullWidth ? "" : "flex flex-col sm:flex-row sm:gap-4"}>
+                          {field.label && (
+                            <dt className="text-xs text-[#34495E]/60 sm:w-24 flex-shrink-0">
+                              {field.label}
+                            </dt>
+                          )}
                           <dd className="text-sm text-[#34495E] break-all font-mono">
                             {field.value?.startsWith('http') || field.value?.startsWith('https') ? (
                               <a 
@@ -257,7 +375,14 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
                                 {field.value}
                               </a>
                             ) : (
-                              field.value
+                              <>
+                                {field.value}
+                                {'extra' in field && field.extra && (
+                                  <span className="ml-2 text-xs text-green-600 font-medium">
+                                    ✓ {field.extra}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </dd>
                         </div>

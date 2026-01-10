@@ -168,6 +168,7 @@ export async function lookupWhois(
   log.info('Starting WHOIS lookup', { domain: normalizedDomain });
 
   // Get enabled providers sorted by priority
+  // For .tr domains, only use tredis provider (skip native to avoid conflicts)
   const isTr = isTrDomain(normalizedDomain);
   const enabledProviders = Object.entries(config.providers)
     .filter(([name, cfg]) => {

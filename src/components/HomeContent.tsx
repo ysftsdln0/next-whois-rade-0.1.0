@@ -39,6 +39,7 @@ function parseAdditionalInfoFromRaw(rawData: string): {
   registrantAddress?: string;
   nicHandle?: string;
   status?: string[];
+  nameServers?: string[];
 } {
   const info: Record<string, any> = {
     dates: {}
@@ -168,6 +169,40 @@ function parseAdditionalInfoFromRaw(rawData: string): {
     info.status = statuses;
   }
   
+  // Parse Name Servers
+  const nameServers: string[] = [];
+  
+  // "** Domain Servers:" format (Trabis .tr)
+  const domainServersMatch = rawData.match(/\*\*\s*Domain Servers:\s*\n([\s\S]*?)(?=\n\*\*|\n\n|$)/i);
+  if (domainServersMatch) {
+    const serversSection = domainServersMatch[1];
+    const serverLines = serversSection.split('\n');
+    for (const line of serverLines) {
+      const trimmed = line.trim();
+      if (trimmed && /^[a-z0-9][\w\-\.]+\.[a-z]{2,}$/i.test(trimmed.split(/\s+/)[0])) {
+        const ns = trimmed.split(/\s+/)[0].toLowerCase();
+        if (!nameServers.includes(ns)) {
+          nameServers.push(ns);
+        }
+      }
+    }
+  }
+  
+  // Standard "Name Server:" or "Nameserver:" format
+  if (nameServers.length === 0) {
+    const nsMatches = rawData.matchAll(/(?:Name\s+Server|Nameserver|Host\s+Name|nserver)\s*:?\s*([a-z0-9][\w\-\.]+\.[a-z]{2,})/gi);
+    for (const match of nsMatches) {
+      const ns = match[1].toLowerCase().trim();
+      if (ns && !nameServers.includes(ns)) {
+        nameServers.push(ns);
+      }
+    }
+  }
+  
+  if (nameServers.length > 0) {
+    info.nameServers = nameServers;
+  }
+  
   return info;
 }
 
@@ -234,6 +269,10 @@ export default function HomeContent() {
           setUsedApi(data.usedApi);
           setQueryTime(data.queryTime || null);
 
+          // Debug: Log the parsed data to check nameServers
+          console.log('[DEBUG] Parsed data:', data.data.parsed);
+          console.log('[DEBUG] NameServers:', data.data.parsed?.nameServers);
+
           const rawData = data.data.raw || '';
           const parsed = data.data.parsed || {};
           const isNotFound =
@@ -258,6 +297,7 @@ export default function HomeContent() {
           const registrantOrganization = (data.data.parsed?.registrantOrganization as string) || rawInfo.registrantOrganization;
           const registrantName = (data.data.parsed?.registrantName as string) || rawInfo.registrantName;
           const nicHandle = (data.data.parsed as any)?.nicHandle || rawInfo.nicHandle;
+          const nameServers = (data.data.parsed?.nameServers as string[]) || rawInfo.nameServers;
 
           const whoisResult: WhoisResultType = {
             domain: data.domain || query,
@@ -287,8 +327,7 @@ export default function HomeContent() {
                       creationDate,
                       expirationDate,
                       updatedDate,
-                      nameServers: data.data.parsed
-                        ?.nameServers as string[],
+                      nameServers,
                       status,
                       dnssec: data.data.parsed?.dnssec as string,
                       registrantName,

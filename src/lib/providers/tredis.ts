@@ -103,7 +103,10 @@ function parseTredisResponse(rawData: string, domain: string): WhoisData {
       case 'dns':
       case 'isim sunucusu':
       case 'host name':
-        const ns = value.toLowerCase().split(/\s+/)[0];
+      case 'nameservers':
+      case 'name servers':
+        // Nameserver değerini parçala - boşluk veya tab ile ayrılmış ilk kısmı al
+        const ns = value.toLowerCase().split(/[\s\t]+/)[0];
         if (ns && !nameServers.includes(ns)) nameServers.push(ns);
         break;
       case 'status':
@@ -139,6 +142,38 @@ function parseTredisResponse(rawData: string, domain: string): WhoisData {
       const content = match.replace(/\*\*/g, '').trim().toLowerCase();
       if (content.includes('aktif') || content.includes('active')) {
         if (!statuses.includes('active')) statuses.push('active');
+      }
+    }
+  }
+
+  // Eğer nameserver bulunamadıysa, özel formatları dene
+  if (nameServers.length === 0) {
+    // "** Domain Servers:" bölümünü ara (Trabis formatı)
+    const domainServersMatch = rawData.match(/\*\*\s*Domain Servers:\s*\n([\s\S]*?)(?=\n\*\*|\n\n|$)/i);
+    if (domainServersMatch) {
+      const serversSection = domainServersMatch[1];
+      const serverLines = serversSection.split('\n');
+      for (const line of serverLines) {
+        const trimmed = line.trim();
+        // Domain pattern'i kontrol et
+        if (trimmed && /^[a-z0-9][\w\-\.]+\.[a-z]{2,}$/i.test(trimmed.split(/\s+/)[0])) {
+          const ns = trimmed.split(/\s+/)[0].toLowerCase();
+          if (!nameServers.includes(ns)) {
+            nameServers.push(ns);
+          }
+        }
+      }
+    }
+    
+    // Hala bulunamadıysa, genel regex ile dene
+    if (nameServers.length === 0) {
+      const nsRegex = /(?:nserver|name\s*server|nameserver|ns|isim\s*sunucusu):\s*([a-z0-9][\w\-\.]+\.[a-z]{2,})/gi;
+      let match;
+      while ((match = nsRegex.exec(rawData)) !== null) {
+        const ns = match[1].toLowerCase().trim();
+        if (ns && !nameServers.includes(ns)) {
+          nameServers.push(ns);
+        }
       }
     }
   }
