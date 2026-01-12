@@ -17,100 +17,19 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   const [showRawData, setShowRawData] = useState(queryType === 'ip');
 
   /**
-   * Parse various WHOIS date formats into a Date object
-   */
-  const parseDate = (input: string | undefined): Date | null => {
-    if (!input) return null;
-
-    const dateStr = input.toString().trim();
-    if (!dateStr) return null;
-
-    // Unix timestamp (seconds or milliseconds)
-    if (/^\d+$/.test(dateStr)) {
-      const num = Number(dateStr);
-      if (!Number.isNaN(num)) {
-        const ms = dateStr.length === 10 ? num * 1000 : num;
-        const d = new Date(ms);
-        return Number.isNaN(d.getTime()) ? null : d;
-      }
-    }
-
-    // DD.MM.YYYY (common in WHOIS and TR locale)
-    const dotMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (dotMatch) {
-      const [, d, m, y] = dotMatch;
-      const day = Number(d);
-      const month = Number(m) - 1; // 0-based
-      const year = Number(y);
-      const parsed = new Date(Date.UTC(year, month, day));
-      return Number.isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    // YYYY-MM-DD (ISO date without time)
-    const ymdMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (ymdMatch) {
-      const [, y, m, d] = ymdMatch;
-      const year = Number(y);
-      const month = Number(m) - 1;
-      const day = Number(d);
-      const parsed = new Date(Date.UTC(year, month, day));
-      return Number.isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    // Other regional formats with '/', e.g. MM/DD/YYYY or DD/MM/YYYY
-    const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (slashMatch) {
-      const [, a, b, y] = slashMatch;
-      const n1 = Number(a);
-      const n2 = Number(b);
-      const year = Number(y);
-      let month: number;
-      let day: number;
-
-      if (n1 > 12 && n2 <= 12) {
-        // Clearly DD/MM/YYYY
-        day = n1;
-        month = n2 - 1;
-      } else if (n2 > 12 && n1 <= 12) {
-        // Clearly MM/DD/YYYY
-        month = n1 - 1;
-        day = n2;
-      } else {
-        // Ambiguous - default to DD/MM/YYYY for tr-TR audience
-        day = n1;
-        month = n2 - 1;
-      }
-
-      const parsed = new Date(Date.UTC(year, month, day));
-      return Number.isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    // Fallback: let JS handle ISO 8601 and other standard formats
-    const fallback = new Date(dateStr);
-    if (!Number.isNaN(fallback.getTime())) {
-      return fallback;
-    }
-
-    return null;
-  };
-
-  /**
    * Format date string for display
    */
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'N/A';
-
-    const parsed = parseDate(dateStr);
-    if (!parsed) {
-      // If we can't parse, show original string as a fallback
+    try {
+      return new Date(dateStr).toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
       return dateStr;
     }
-
-    return new Intl.DateTimeFormat('tr-TR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(parsed);
   };
 
   /**
@@ -119,8 +38,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   const calculateDomainAge = (creationDate: string | undefined) => {
     if (!creationDate) return 'N/A';
     try {
-      const created = parseDate(creationDate);
-      if (!created) return 'N/A';
+      const created = new Date(creationDate);
       const now = new Date();
       const diff = now.getTime() - created.getTime();
       
@@ -145,8 +63,7 @@ export default function WhoisResult({ result, queryType = 'domain' }: WhoisResul
   const calculateDaysUntilExpiry = (expirationDate: string | undefined) => {
     if (!expirationDate) return null;
     try {
-      const expiry = parseDate(expirationDate);
-      if (!expiry) return null;
+      const expiry = new Date(expirationDate);
       const now = new Date();
       const diff = expiry.getTime() - now.getTime();
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
